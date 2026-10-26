@@ -1,0 +1,171 @@
+# Defaults for the workflow. Copy an examples/ profile to run_settings.sh and
+# edit that file for each run; its values override these defaults.
+# Run ./run.sh scan to inspect naming, then ./run.sh check before submission.
+
+
+# ======================= EDIT FROM HERE =======================
+
+# Where output goes. Needs room for roughly 3x your raw FASTQ size.
+# /90daydata is purged at 90 days by access time. /project is not.
+WORKDIR="/90daydata/CHANGEME/rnaseq_run"
+
+# Raw FASTQ directories, one per sequencing lane. Any number, not only two.
+# The workflow reads these directories without writing into them.
+LANE_DIRS=(
+    "/path/to/lane1"
+    "/path/to/lane2"
+)
+
+# Execution: slurm submits jobs; local runs one stage/sample at a time on Linux.
+EXECUTOR="slurm"
+SOFTWARE_MODE="modules"  # modules or path (programs already on PATH)
+LOCAL_THREADS=8
+
+# SLURM.
+#   account:    sacctmgr -nP show assoc user=$USER format=Account | sort -u
+#   partition:  scontrol show partition | grep PartitionName
+#               Ceres has ceres and scavenger.
+SLURM_ACCOUNT="CHANGEME"
+SLURM_MAIL="CHANGEME@usda.gov"
+SLURM_PARTITION="ceres"
+
+# How a FASTQ filename becomes a sample name. ./run.sh scan shows both.
+#   illumina      strip the _S<n>_L<n> block
+#                   101_S13_L008_R1_001.fastq.gz          -> 101
+#                   DGADO_120_S23_L006_R1_001.fastq.gz    -> DGADO_120
+#                   245_ColumnCleaned_S167_L008_R1_001... -> 245_ColumnCleaned
+#   first_field   everything before the first underscore
+#                   101_S13_L008_R1_001.fastq.gz          -> 101
+#                   DGADO_120_S23_L006_R1_001.fastq.gz    -> DGADO   <- collides
+#                   245_ColumnCleaned_S167_L008_R1_001... -> 245
+#   custom        set SAMPLE_REGEX below, applied with sed -E after the read
+#                 suffix is stripped
+SAMPLE_NAME_STYLE="illumina"
+SAMPLE_REGEX=""
+
+# Samples to leave out of samples.txt.
+# Undetermined is the demultiplexer's bin of reads whose index matched no
+# sample. It is not a sample, and it is usually one of the largest files.
+EXCLUDE_SAMPLES=( "Undetermined" )
+
+# Reference genome release.
+GENCODE_RELEASE="M35"
+
+# Where the genome, annotation and STAR index live. Point several runs at the
+# same directory and they are downloaded and built once, not per run.
+# The index is about 26 GB and takes roughly 50 min to build.
+REF_DIR="${WORKDIR}/References"
+
+# Read length minus 1. "auto" reads it from the first FASTQ record.
+# Set a number instead to reuse an index that was built with that value.
+STAR_SJDB_OVERHANG="auto"
+
+# ======================== EDIT TO HERE ========================
+#
+# Everything below is derived. Change it only if you have a reason.
+
+
+default_ref_dir="${WORKDIR}/References"
+# Optional run-specific settings, kept beside the template or selected explicitly.
+settings="${PIPELINE_CONFIG:-$(dirname "${BASH_SOURCE[0]}")/run_settings.sh}"
+if [[ -f "$settings" ]]; then
+    export PIPELINE_CONFIG="$(cd "$(dirname "$settings")" && pwd)/$(basename "$settings")"
+    source "$PIPELINE_CONFIG"
+elif [[ -n "${PIPELINE_CONFIG:-}" ]]; then
+    echo "config.sh: configuration file not found: $PIPELINE_CONFIG" >&2
+    return 1
+fi
+case "$EXECUTOR" in slurm|local) ;; *) echo "EXECUTOR must be slurm or local" >&2; return 1;; esac
+case "$SOFTWARE_MODE" in modules|path) ;; *) echo "SOFTWARE_MODE must be modules or path" >&2; return 1;; esac
+load_software() {
+    if [[ "$SOFTWARE_MODE" == modules ]]; then
+        type module >/dev/null 2>&1 || { echo "Environment modules are unavailable; use SOFTWARE_MODE=path for installed programs" >&2; return 1; }
+        module load "$@" || return $?
+        # Some tool modules include another python3. Keep the selected Python first.
+        module unload "$MODULE_PYTHON" || return $?
+        module load "$MODULE_PYTHON" || return $?
+    fi
+}
+# The optional setup installs a checksum-verified STAR build inside this copy.
+# Explicit module overrides in the environment or run settings remain available.
+runtime="$(dirname "${BASH_SOURCE[0]}")/tools/star_runtime.sh"
+if [[ -z "${MODULE_STAR:-}" && -f "$runtime" ]]; then
+    source "$runtime" || return $?
+fi
+if [[ "$REF_DIR" == "$default_ref_dir" ]]; then REF_DIR="${WORKDIR}/References"; fi
+
+# --- FASTQ naming ------------------------------------------------------------
+FASTQ_SUFFIX_R1="${FASTQ_SUFFIX_R1:-_R1_001.fastq.gz}"
+FASTQ_SUFFIX_R2="${FASTQ_SUFFIX_R2:-_R2_001.fastq.gz}"
+
+case "${SAMPLE_NAME_STYLE}" in
+    illumina)    SAMPLE_REGEX='s/_S[0-9]+_L[0-9]+$//' ;;
+    first_field) SAMPLE_REGEX='s/_.*$//' ;;
+    custom)      : ;;   # SAMPLE_REGEX set above
+    *) echo "config.sh: SAMPLE_NAME_STYLE must be illumina, first_field or custom" >&2 ;;
+esac
+
+# --- stage outputs -----------------------------------------------------------
+CONCAT_DIR="${WORKDIR}/concatenated_reads"
+HTS_OUT="${WORKDIR}/01-HTS_Preproc"
+STAR_OUT="${WORKDIR}/02-STAR_alignment"
+COUNTS_DIR="${WORKDIR}/03-Counts"
+COUNTS_FILE="${COUNTS_DIR}/counts.txt"
+SAMPLES_TXT="${WORKDIR}/samples.txt"
+SLURMOUT="${WORKDIR}/slurmout"
+
+# --- references --------------------------------------------------------------
+GENCODE_BASE="https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_${GENCODE_RELEASE}"
+GENOME_FA_URL="${GENCODE_BASE}/GRCm39.primary_assembly.genome.fa.gz"
+GTF_URL="${GENCODE_BASE}/gencode.v${GENCODE_RELEASE}.annotation.gtf.gz"
+RRNA_URL="https://ucdavis-bioinformatics-training.github.io/2025-June-RNA-Seq-Analysis/data_reduction/mouse_rrna.fasta"
+
+GENOME_FA="${REF_DIR}/GRCm39.primary_assembly.genome.fa"
+GTF="${REF_DIR}/gencode.v${GENCODE_RELEASE}.annotation.gtf"
+# mouse_rrna.fasta ships with this repo. 0_Setup/1_fetch_references.slurm copies
+# it into REF_DIR, and falls back to the URL above if it is not there.
+RRNA_FA="${REF_DIR}/mouse_rrna.fasta"
+
+STAR_INDEX="${REF_DIR}/star.overlap${STAR_SJDB_OVERHANG}.gencode.${GENCODE_RELEASE}"
+
+# --- counts ------------------------------------------------------------------
+# Column of STAR's ReadsPerGene.out.tab.
+#   2 unstranded, 3 stranded forward, 4 stranded reverse (dUTP kits)
+# "auto" picks it from the alignments. 3_star_stats.sh prints all three totals.
+COUNT_COLUMN="${COUNT_COLUMN:-auto}"
+
+# --- SLURM -------------------------------------------------------------------
+SLURM_MAIL_TYPE="${SLURM_MAIL_TYPE:-NONE}"
+# How many array tasks run at once, per stage. Raise on an idle cluster.
+THROTTLE_CONCAT="${THROTTLE_CONCAT:-25}"
+THROTTLE_HTS="${THROTTLE_HTS:-30}"
+THROTTLE_STAR="${THROTTLE_STAR:-20}"
+
+# --- modules -----------------------------------------------------------------
+MODULE_HTSTREAM="${MODULE_HTSTREAM:-htstream/1.3.3}"    # binaries inside report 1.3.2
+MODULE_STAR="${MODULE_STAR:-star/2.7.11b}"
+MODULE_PYTHON="${MODULE_PYTHON:-python_3/3.11.1}"
+MODULE_SAMTOOLS="${MODULE_SAMTOOLS:-samtools/1.17}"
+
+# Ceres has no module carrying scipy or pandas, so the two .py scripts need an
+# environment. 0_Setup/2_python_env.slurm builds one here.
+PY_VENV="${WORKDIR}/.venv"
+
+# Group-writable output so collaborators in the project group can use the run.
+umask 007
+
+# Values worked out by ./run.sh check (read length, index path, count column).
+# Written into WORKDIR so a run stays reproducible. Overrides the "auto"
+# settings above.
+# (an `if` here, not `[[ ]] && source`, so sourcing config.sh never returns 1
+# when resolved.sh does not exist yet)
+if [[ -f "${WORKDIR}/resolved.sh" ]]; then
+    source "${WORKDIR}/resolved.sh"
+fi
+if [[ -f "$WORKDIR/run_records/code_sha256.txt" ]]; then
+    sha256sum --strict --status -c "$WORKDIR/run_records/code_sha256.txt" || {
+        echo "Pipeline source or run settings changed after the run was recorded" >&2
+        return 1
+    }
+fi
+true

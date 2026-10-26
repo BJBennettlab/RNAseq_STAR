@@ -1,6 +1,7 @@
 # 4_DE_Analysis
 
-R Markdown scripts for differential expression analysis of CC pup RNA-seq data. Scripts take the count matrix from `3_STAR_Alignment/` as input and perform DESeq2/edgeR-based DE analysis with biological comparisons of interest.
+Original R Markdown analyses for the CC pup studies. These files are not run by
+`run.sh all` and are not configured for a new study by `run_settings.sh`.
 
 ## Analysis Scripts
 
@@ -22,7 +23,14 @@ The `RNA_seq_workshop/` subdirectory contains teaching materials for RNA-seq DE 
 
 ## Usage
 
-Open any `.Rmd` file in RStudio and knit, or render from the command line:
+Before reusing a notebook, review its input paths, sample filters, metadata joins,
+model and contrasts. The original notebooks use earlier count files, the
+`ensembl_mm_112.txt` annotation export and study-specific spreadsheets; some also
+use phenotype or haplotype results. See [reference inputs](../docs/references.md).
+
+Match every sample to confirmed study metadata and record the R package versions.
+Do not reuse the original exclusions or comparisons for a different experiment.
+After preparing and checking those inputs, open the notebook in RStudio or render:
 
 ```r
 rmarkdown::render("AllPups_Diet_DE_analysis.Rmd")

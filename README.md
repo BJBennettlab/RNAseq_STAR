@@ -1,64 +1,86 @@
 # RNAseq_STAR
 
-RNA-seq preprocessing, alignment, and differential expression analysis pipeline for Collaborative Cross (CC) and Diversity Outbred (DO) mouse studies. This repository covers the full workflow from raw FASTQ concatenation through STAR alignment and downstream DE analysis.
+Paired-end mouse RNA-seq: combine sequencing lanes, preprocess with HTStream,
+align with STAR, and produce checked gene counts and BAM files.
 
-## Pipeline Overview
+## Setup and run
 
-```
-Raw FASTQs (multi-lane)
-    │
-    ▼
-1_Pre_Preprocessing     — Concatenate lanes, organize by sample
-    │
-    ▼
-2_HTStream_Preprocessing — Quality trimming, adapter removal, deduplication
-    │
-    ▼
-3_STAR_Alignment        — Genome index build, read alignment, read-to-count matrix
-    │
-    ▼
-4_DE_Analysis           — Differential expression (R/RMarkdown)
+On **Ceres (SCINet)**, use **Clusters > Ceres Shell Access** in
+[Open OnDemand](https://scinet.usda.gov/guides/use/open-ondemand), or connect by SSH.
+Work in a directory you can write to under your project allocation. Raw data
+belongs in persistent project storage; processing outputs can go under `/90daydata`.
+
+Clone the repository:
+
+```bash
+git clone https://github.com/Dpbudke/RNAseq_STAR.git
+cd RNAseq_STAR
 ```
 
-## Dependencies
+Keep raw FASTQs in separate lane directories. Each lane must contain the same
+samples and its provider's `@md5Sum.md5` file. Continue on Ceres:
 
-| Stage | Tools |
-|-------|-------|
-| Pre-processing | bash |
-| QC/Trimming | [HTStream v1.3.3](https://ibest.github.io/HTStream/) |
-| Alignment | [STAR](https://github.com/alexdobin/STAR) |
-| DE Analysis | R, DESeq2 / edgeR (see individual Rmd files) |
-
-All HPC scripts are written for SLURM schedulers and assume module-based software loading (`module load htstream`, `module load star`).
-
-## Repository Structure
-
-```
-RNAseq_STAR/
-├── 1_Pre_Preprocessing/       # Lane concatenation and sample organization
-├── 2_HTStream_Preprocessing/  # HTStream QC and k-mer validation
-├── 3_STAR_Alignment/          # STAR index, alignment, and count matrix generation
-└── 4_DE_Analysis/             # Differential expression R Markdown scripts
+```bash
+cp examples/ceres.sh run_settings.sh
+nano run_settings.sh
+python3 0_Setup/4_fetch_star.py
+./run.sh scan
+./run.sh check
+./run.sh all --dry-run
+./run.sh all
+./run.sh status
 ```
 
-## Quick Start
+Set the output directory, raw lane paths and Slurm account in `run_settings.sh`.
+`scan` shows filenames and sample naming; `check` checks settings and software.
+`all` submits dependent Slurm jobs. The numbered scripts still perform each stage.
+The STAR setup downloads a fixed, checksum-verified Linux build into this copy.
 
-1. **Concatenate lanes** — edit paths in `1_Pre_Preprocessing/1_concatenate_rnaseq.sh` and run
-2. **Organize samples** — run `1_Pre_Preprocessing/2_organize_samples.sh` in the concatenated reads directory
-3. **HTStream QC** — create `samples.txt` (one sample per line), then `sbatch 2_HTStream_Preprocessing/1_hts_preproc.slurm`
-4. **STAR index** — `sbatch 3_STAR_Alignment/1_star_index.slurm` (one-time, ~1-2h)
-5. **STAR alignment** — `sbatch 3_STAR_Alignment/2_star.slurm`
-6. **Build count matrix** — `bash 3_STAR_Alignment/4_reads2counts.sh`
-7. **DE analysis** — open and knit the relevant Rmd in `4_DE_Analysis/`
+On **another Linux system**, use `examples/linux.sh`. Install or activate Python
+3.11+, HTStream, STAR, SAMtools and GNU command-line tools first. Local mode runs
+one sample at a time without Slurm; keep the process running until it finishes.
+A workstation needs enough RAM for the mouse index and BAM sorting, typically at
+least 48 GiB. Another Slurm cluster can use either site modules or programs on PATH.
 
-## Study Context
+[SETUP_INSTRUCTIONS.txt](SETUP_INSTRUCTIONS.txt) covers each setting, stage-by-stage
+commands, checks and recovery. [Runtime setup](docs/runtime.md) describes software
+installation and recorded builds. A new study needs a new output directory.
 
-Scripts were developed for RNA-seq analysis of CC and CC-RIX pup samples (~246 samples) studying diet effects on gene expression. Reference genome: GRCm39
+## Results
 
-## Related Repository
+| Run directory | Contents |
+| --- | --- |
+| `03-Counts/counts.txt` | Integer gene-by-sample count matrix |
+| `02-STAR_alignment/` | Sorted BAMs, BAM indexes, STAR count tables and logs |
+| `summary_htstream.txt`, `mapping_qc.tsv`, `strandedness.tsv` | Per-sample QC |
+| `count_validation.json`, `bam_validation.json` | Count comparison and BAM checks |
+| `samples.txt`, `input_manifest.tsv` | Sample order and exact inputs from every lane |
+| `run_records/` | Source snapshot, configuration and executable identities |
+| `jobs.tsv` or `local_jobs.json`, `slurmout/` | Task records and output/error logs |
 
-GBRS-based allele-specific expression analysis has been separated into [RNAseq_GBRS](https://github.com/Dpbudke/RNAseq_GBRS).
+Processing does not modify raw files. Missing mates, different sample sets, name collisions,
+failed source checks and failed pipeline commands stop processing. Finalization
+compares every count cell with its STAR table, checks BAMs and builds indexes.
+Require successful task completion and passed validation reports. An empty error
+log alone is not a completion check. [Validation commands](docs/validation.md)
+show how to repeat the checks.
 
-## Author
+## References and analysis choices
 
-Dawson Budke — dpbudke@ucdavis.edu
+The default is GRCm39 / GENCODE M35. The reference stage downloads the genome and
+gene annotation and checks GENCODE's MD5 list. `References/mouse_rrna.fasta` is
+already included for HTStream's rRNA measurement. Keep these inputs fixed within
+a study; they do not need routine updates. A different annotation release needs
+a new reference directory, index and run. See [reference inputs](docs/references.md)
+for what is included, what is downloaded, and the separate inputs needed by the
+original R analyses.
+
+Sample names retain underscores by default. Any number of lanes is supported.
+`COUNT_COLUMN=auto` checks strand estimates per sample and stops if they disagree;
+confirm the library preparation when interpreting this choice. HTStream's original
+duplicate removal and trimming are retained. rRNA is measured, not removed.
+Trimmed singletons are saved but not aligned by this paired-read workflow.
+
+`4_DE_Analysis/` contains the original study-specific R analyses. They are not run
+by `all`; they need their own metadata, design and contrasts. GBRS and QTL mapping
+are separate analyses. [CHANGELOG.md](CHANGELOG.md) records pipeline changes.

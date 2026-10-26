@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 import gzip
 from collections import Counter
 from Bio import SeqIO
@@ -153,27 +154,44 @@ def print_correlation_summary(correlations, samples, read_type):
                 print(f"{sample1} raw vs {sample2} processed correlation = {corr:.3f}")
 
 def main():
-    # Define directories and samples
-    raw_dir = "concatenated_reads"
-    proc_dir = "01-HTS_Preproc"
-    samples = ["1", "57C", "205", "314", "396C"]
-    
-    # Compare samples
-    print("\nComparing samples...")
-    profiles_r1, profiles_r2 = compare_samples(raw_dir, proc_dir, samples)
-    
-    # Calculate correlations
+    import argparse
+    ap = argparse.ArgumentParser(
+        description="k-mer profile correlation between raw and HTStream-processed reads")
+    ap.add_argument("--raw-dir", default=os.environ.get("CONCAT_DIR", "concatenated_reads"))
+    ap.add_argument("--proc-dir", default=os.environ.get("HTS_OUT", "01-HTS_Preproc"))
+    ap.add_argument("--samples", default=os.environ.get("SAMPLES_TXT", "samples.txt"),
+                    help="file with one sample per line")
+    ap.add_argument("--n", type=int, default=5,
+                    help="how many samples to take from the top of that file (0 = all)")
+    ap.add_argument("--out-prefix", default="sample_correlations")
+    a = ap.parse_args()
+
+    if not os.path.isfile(a.samples):
+        sys.exit(f"sample list not found: {a.samples}")
+    with open(a.samples) as fh:
+        samples = [ln.strip() for ln in fh if ln.strip()]
+    if a.n > 0:
+        samples = samples[:a.n]
+    if not samples:
+        sys.exit(f"{a.samples} is empty")
+
+    print(f"raw:  {a.raw_dir}")
+    print(f"proc: {a.proc_dir}")
+    print(f"samples: {', '.join(samples)}")
+
+    profiles_r1, profiles_r2 = compare_samples(a.raw_dir, a.proc_dir, samples)
+    if not profiles_r1 and not profiles_r2:
+        sys.exit("no profiles were built. check --raw-dir and --proc-dir.")
+
     correlations_r1 = calculate_correlations(profiles_r1)
     correlations_r2 = calculate_correlations(profiles_r2)
-    
-    # Save correlation matrices
-    write_correlations(correlations_r1, "sample_correlations_R1.csv")
-    write_correlations(correlations_r2, "sample_correlations_R2.csv")
-    print("\nCorrelation matrices saved to sample_correlations_R1.csv and sample_correlations_R2.csv")
-    
-    # Print summaries including mismatches
+    write_correlations(correlations_r1, f"{a.out_prefix}_R1.csv")
+    write_correlations(correlations_r2, f"{a.out_prefix}_R2.csv")
+    print(f"\nwrote {a.out_prefix}_R1.csv and {a.out_prefix}_R2.csv")
+
     print_correlation_summary(correlations_r1, samples, "R1")
     print_correlation_summary(correlations_r2, samples, "R2")
+
 
 if __name__ == "__main__":
     main()
