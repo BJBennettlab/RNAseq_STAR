@@ -13,12 +13,15 @@ belongs in persistent project storage; processing outputs can go under `/90dayda
 Clone the repository:
 
 ```bash
-git clone https://github.com/Dpbudke/RNAseq_STAR.git
+git clone https://github.com/BJBennettlab/RNAseq_STAR.git
 cd RNAseq_STAR
 ```
 
 Keep raw FASTQs in separate lane directories. Each lane must contain the same
-samples and its provider's `@md5Sum.md5` file. Continue on Ceres:
+samples and its provider's `@md5Sum.md5` file. If a study was sequenced as
+separate pools on different lanes, run each pool as its own run and join the
+validated count tables afterwards with `scripts/combine_runs.py` (see
+[SETUP_INSTRUCTIONS.txt](SETUP_INSTRUCTIONS.txt)). Continue on Ceres:
 
 ```bash
 cp examples/ceres.sh run_settings.sh
@@ -57,6 +60,11 @@ installation and recorded builds. A new study needs a new output directory.
 | `samples.txt`, `input_manifest.tsv` | Sample order and exact inputs from every lane |
 | `run_records/` | Source snapshot, configuration and executable identities |
 | `jobs.tsv` or `local_jobs.json`, `slurmout/` | Task records and output/error logs |
+
+Each FASTQ is assigned to a sample by its full name (`<sample>_S<n>_L<lane>_R1_001.fastq.gz`
+by default), so a name that begins another name, such as `MOUSE_1` and `MOUSE_10`,
+always keeps its own files. `input_manifest.tsv` records the exact file used for
+every sample and lane.
 
 Processing does not modify raw files. Missing mates, different sample sets, name collisions,
 failed source checks and failed pipeline commands stop processing. Finalization

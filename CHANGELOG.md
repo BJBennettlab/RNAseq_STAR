@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-26
+
+- Add `scripts/combine_runs.py` to join validated count tables from separate
+  pools, with tests. It refuses unfinished or changed runs, different gene lists
+  or count columns, and samples found in more than one run.
+- Add a regression test for sample names that begin other names (`MOUSE_1`,
+  `MOUSE_10`, `MOUSE_100`). The original concatenation step searched for
+  `<sample>*` and kept the first file found, so such a name could receive another
+  sample's lane files. Since 2026-09-10 each file is assigned by its full name.
+- Point setup documents at the lab's GitHub organization.
+
 ## 2026-09-10
 
 - Add sequential Linux execution without Slurm, using the same numbered stages.
@@ -118,7 +129,7 @@
   `GRCm39_AFRI_counts.txt`.
 - `2_organize_samples.sh` is gone. Each concatenation task writes straight into
   `concatenated_reads/<sample>/`.
-- README restored to Dawson's original; separate `SETUP_INSTRUCTIONS.txt` added.
+- README restored to the original; separate `SETUP_INSTRUCTIONS.txt` added.
 
 ### Fixed
 

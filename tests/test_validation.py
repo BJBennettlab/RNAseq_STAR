@@ -29,6 +29,19 @@ class Validation(unittest.TestCase):
     def test_collision(self):
         lanes=self.lanes();p=lanes[0]/'DGADO_2_S2_L001_R1_001.fastq.gz';p.write_bytes(b'x')
         with self.assertRaises(ValueError):self.collect(lanes)
+    def test_prefix_names_keep_their_own_files(self):
+        # A name that starts another name (S_1, S_10, S_100) must still get only its own files.
+        lanes=[]
+        for lane,number in [('l1',5),('l2',6)]:
+            d=self.root/lane;d.mkdir();lanes.append(d)
+            for i,s in enumerate(['DOCHLN_1','DOCHLN_10','DOCHLN_100','DOCHLN_101'],1):
+                for mate in [1,2]:
+                    with gzip.open(d/f'{s}_S{i}_L00{number}_R{mate}_001.fastq.gz','wt') as f:f.write(f'@{s}\nACGT\n+\nIIII\n')
+        names,rows=self.collect(lanes)
+        self.assertEqual(names,['DOCHLN_1','DOCHLN_10','DOCHLN_100','DOCHLN_101'])
+        self.assertEqual(len(rows),8)
+        for name,lane,r1,r2,*_ in rows:
+            self.assertTrue(Path(r1).name.startswith(name+'_S'));self.assertTrue(Path(r2).name.startswith(name+'_S'))
     def test_read_length_first_record(self):
         p=self.root/'reads.gz'
         with gzip.open(p,'wt') as f:f.write('@a\nACGT\n+\nIIII\n'+'not another FASTQ record\n'*10000)

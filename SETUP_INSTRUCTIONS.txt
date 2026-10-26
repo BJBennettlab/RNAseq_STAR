@@ -24,7 +24,7 @@ RNAseq_STAR setup
    Start in a writable project location, outside any raw lane or existing run.
 
    Clone the repository:
-     git clone https://github.com/Dpbudke/RNAseq_STAR.git
+     git clone https://github.com/BJBennettlab/RNAseq_STAR.git
      cd RNAseq_STAR
 
    On Ceres:
@@ -183,6 +183,20 @@ RNAseq_STAR setup
    samples/input_manifest, run_records, resolved.sh, job records and exact
    reference files or their recorded downloads/hashes. Use checksums to verify
    copies to permanent storage. Do not delete intermediates before acceptance.
+
+7. SEVERAL POOLS ON DIFFERENT LANES
+
+   Lanes inside one run must hold the same samples. When a study was sequenced
+   as separate pools (for example pool A on lanes 5 and 6, pool B on lanes 7
+   and 8), give each pool its own settings file and WORKDIR, and point REF_DIR
+   at one shared reference directory so both pools use the same index. Run each
+   pool through step 6, then join the validated tables:
+
+     python3 scripts/combine_runs.py /path/to/joined RUN_DIR_POOL_A RUN_DIR_POOL_B
+
+   It refuses runs that have not passed finalization, count tables changed after
+   validation, different gene lists or count columns, and a sample found in more
+   than one pool. The output holds counts.txt, samples.tsv and SHA256SUMS.txt.
 
 IF A STAGE FAILS
 
