@@ -1,7 +1,9 @@
 # Check a completed run
 
-Run checks in a compute allocation when they read whole FASTQ or BAM files.
-Use the same pipeline copy and run configuration that created the results.
+Use the same pipeline copy and run configuration that created the results. With
+`EXECUTOR=slurm`, `confirm` and the other checks below submit a small Slurm job (a
+login node is only for submitting and checking jobs); read its output in
+`WORKDIR/slurmout/` once `sacct` shows it finished.
 
 ```bash
 ./run.sh status

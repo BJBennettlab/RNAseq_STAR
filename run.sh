@@ -9,6 +9,9 @@
 # Individual stages, if you want to drive it by hand:
 #   references pyenv md5 samples concat hts htsqc index star stats counts
 #   finalize confirm kmerqc compare
+# With EXECUTOR=slurm every stage that reads data runs as a Slurm job, including
+# the short ones (htsqc stats counts confirm kmerqc compare): a cluster login node
+# is only for submitting and checking jobs.
 #
 # --dry-run prints the sbatch line without submitting.
 # Anything after -- is passed through to sbatch:
@@ -270,6 +273,27 @@ sb() {                              # sb <script> [opts...]  -> prints job id
 }
 loc() { echo "+ bash $*" >&2; [[ $DRY -eq 1 ]] && return 0; cd "${HERE}"; bash "$@"; }
 
+# Short summaries and checks: a small Slurm job with EXECUTOR=slurm, run here with EXECUTOR=local.
+short_job() {                       # short_job NAME CPUS MEMORY TIME COMMAND...
+    local name="$1" cpus="$2" mem="$3" time="$4"; shift 4
+    if [[ "$EXECUTOR" == local ]]; then
+        echo "+ $*" >&2; [[ $DRY -eq 1 ]] && return 0
+        (cd "${HERE}" && "$@"); return
+    fi
+    local -a cmd=(sbatch --parsable "--job-name=${name}" "--cpus-per-task=${cpus}" "--mem=${mem}"
+                  "--time=${time}" "--output=${SLURMOUT}/${name}_%j.out")
+    while IFS= read -r o; do cmd+=("$o"); done < <(common_opts)
+    cmd+=(--wrap "cd $(printf '%q' "$HERE") && $(printf '%q ' "$@")")
+    if [[ $DRY -eq 1 ]]; then echo "+ ${cmd[*]}" >&2; return 0; fi
+    local job
+    job=$("${cmd[@]}")
+    [[ "$job" =~ ^[0-9]+([\;].*)?$ ]] || { echo "Invalid sbatch response" >&2; exit 1; }
+    job=${job%%;*}
+    [[ -z "$JOURNAL" ]] || printf '%s\t%s\n' "$name" "$job" >> "$JOURNAL"
+    echo "Submitted ${name} as job ${job}; output ${SLURMOUT}/${name}_${job}.out"
+}
+need_venv() { [[ -x "${PY_VENV}/bin/python" ]] || { echo "no venv, run './run.sh pyenv' first" >&2; exit 1; }; }
+
 mkdir -p "${SLURMOUT}" 2>/dev/null || true
 
 case "$STEP" in
@@ -285,14 +309,12 @@ case "$STEP" in
     hts)        n=$(n_samples); sb "2_HTStream_Preprocessing/1_hts_preproc.slurm" "--array=1-${n}%${THROTTLE_HTS}" ;;
     index)      sb "3_STAR_Alignment/1_star_index.slurm" ;;
     star)       n=$(n_samples); sb "3_STAR_Alignment/2_star.slurm" "--array=1-${n}%${THROTTLE_STAR}" ;;
-    stats)      loc "3_STAR_Alignment/3_star_stats.sh" ;;
-    counts)     loc "3_STAR_Alignment/4_reads2counts.sh" ;;
+    stats)      short_job star_stats 2 8G 01:00:00 bash 3_STAR_Alignment/3_star_stats.sh ;;
+    counts)     short_job star_counts 2 16G 02:00:00 bash 3_STAR_Alignment/4_reads2counts.sh ;;
     finalize)   sb "3_STAR_Alignment/7_finalize.slurm" ;;
     htsqc)
-        [[ -x "${PY_VENV}/bin/python" ]] || { echo "no venv, run './run.sh pyenv' first" >&2; exit 1; }
-        [[ $DRY -eq 1 ]] && { echo "+ hts_summary.py"; exit 0; }
-        cd "${HERE}"
-        HTS_OUT="${HTS_OUT}" SAMPLES_TXT="${SAMPLES_TXT}" \
+        need_venv
+        short_job hts_summary 2 8G 01:00:00 env HTS_OUT="${HTS_OUT}" SAMPLES_TXT="${SAMPLES_TXT}" \
             "${PY_VENV}/bin/python" 2_HTStream_Preprocessing/3_hts_summary.py \
             --out "${WORKDIR}/summary_htstream.txt"
         ;;
@@ -333,25 +355,23 @@ case "$STEP" in
         ;;
 
     confirm)
-        [[ -x "${PY_VENV}/bin/python" ]] || { echo "no venv, run './run.sh pyenv' first" >&2; exit 1; }
-        cd "${HERE}"
-        STAR_OUT="${STAR_OUT}" COUNTS_FILE="${COUNTS_FILE}" \
+        need_venv
+        short_job star_confirm 2 16G 02:00:00 env STAR_OUT="${STAR_OUT}" COUNTS_FILE="${COUNTS_FILE}" \
             "${PY_VENV}/bin/python" 3_STAR_Alignment/5_confirm_reads2counts.py \
             --star-dir "$STAR_OUT" --counts "$COUNTS_FILE" --samples "$SAMPLES_TXT" \
             --column "$COUNT_COLUMN" --report "$WORKDIR/count_validation.json"
         ;;
     kmerqc)
-        [[ -x "${PY_VENV}/bin/python" ]] || { echo "no venv, run './run.sh pyenv' first" >&2; exit 1; }
-        cd "${WORKDIR}"
-        CONCAT_DIR="${CONCAT_DIR}" HTS_OUT="${HTS_OUT}" SAMPLES_TXT="${SAMPLES_TXT}" \
+        need_venv
+        short_job hts_kmer_qc 4 32G 12:00:00 bash -c 'cd "$1" && shift && exec "$@"' kmerqc "${WORKDIR}" \
+            env CONCAT_DIR="${CONCAT_DIR}" HTS_OUT="${HTS_OUT}" SAMPLES_TXT="${SAMPLES_TXT}" \
             "${PY_VENV}/bin/python" "${HERE}/2_HTStream_Preprocessing/2_HTStream_Kmer_QC.py" \
             "${EXTRA[@]+"${EXTRA[@]}"}"
         ;;
     compare)
         [[ ${#EXTRA[@]} -ge 1 ]] || { echo "usage: ./run.sh compare -- /path/to/other_counts.txt" >&2; exit 2; }
-        [[ -x "${PY_VENV}/bin/python" ]] || { echo "no venv, run './run.sh pyenv' first" >&2; exit 1; }
-        cd "${HERE}"
-        "${PY_VENV}/bin/python" 3_STAR_Alignment/6_compare_to_published.py \
+        need_venv
+        short_job star_compare 2 16G 01:00:00 "${PY_VENV}/bin/python" 3_STAR_Alignment/6_compare_to_published.py \
             --mine "${COUNTS_FILE}" --published "${EXTRA[0]}" \
             --out "${WORKDIR}/comparison.txt"
         ;;

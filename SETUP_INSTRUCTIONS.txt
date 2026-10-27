@@ -167,7 +167,7 @@ RNAseq_STAR setup
 6. CHECK AND KEEP RESULTS
 
      ./run.sh status
-     ./run.sh confirm
+     ./run.sh confirm      (a short Slurm job; output in WORKDIR/slurmout/)
 
    Require all expected tasks to complete successfully. In WORKDIR, confirm:
    - pipeline_state.txt says validated.

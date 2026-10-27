@@ -2,6 +2,10 @@
 
 ## 2026-10-26
 
+- With `EXECUTOR=slurm`, the stages usually run by hand (`stats`, `counts`, `htsqc`, `confirm`, `kmerqc`,
+  `compare`) now submit a small Slurm job instead of running on the node where `run.sh` was called, which on a
+  cluster is a login node. The job's output is in `WORKDIR/slurmout/<stage>_<job>.out`. `EXECUTOR=local` still
+  runs them in place. `run.sh all` already ran them inside the finalize job.
 - Add `scripts/combine_runs.py` to join validated count tables from separate
   pools, with tests. It refuses unfinished or changed runs, different gene lists
   or count columns, and samples found in more than one run.
