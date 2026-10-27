@@ -1,5 +1,7 @@
 # RNAseq_STAR
 
+By Dawson Budke ([@Dpbudke](https://github.com/Dpbudke)), Bennett Lab.
+
 Paired-end mouse RNA-seq: combine sequencing lanes, preprocess with HTStream,
 align with STAR, and produce checked gene counts and BAM files.
 
