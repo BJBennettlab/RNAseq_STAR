@@ -2,12 +2,14 @@ RNAseq_STAR setup
 
 1. PREPARE THE INPUTS
 
-   This workflow runs on Linux. It accepts paired-end mouse FASTQ files, with one
-   directory per sequencing lane. It combines lanes for the same sample.
+   This workflow runs on Linux. It accepts paired-end or single-end FASTQ files
+   for mouse, human, any Ensembl species or your own genome, with one directory
+   per sequencing lane. It combines lanes for the same sample.
 
    Before starting, obtain:
-   - Raw R1 and R2 FASTQs for every sample in every lane.
-   - The provider's @md5Sum.md5 in each lane directory, covering every FASTQ.
+   - Raw R1 (and, for paired-end, R2) FASTQs for every sample in every lane.
+   - The provider's checksum file in each lane directory, covering every FASTQ
+     (@md5Sum.md5 by default; SOURCE_MD5 names it, or none if there is none).
    - A sample list or sample sheet to check the names against.
    - Genome assembly, annotation release and library strand information.
    - A writable output location with space for intermediate reads and BAMs.
@@ -54,7 +56,13 @@ RNAseq_STAR setup
 
    Other useful settings:
    SAMPLE_NAME_STYLE     illumina, first_field, or custom.
-   GENCODE_RELEASE       Fixed mouse annotation release; default M35 / GRCm39.
+   LIBRARY_LAYOUT        paired (default) or single.
+   SOURCE_MD5            Provider checksum file in each lane; default @md5Sum.md5, or none.
+   REFERENCE_SOURCE      gencode_mouse (default), gencode_human, ensembl or custom.
+   GENCODE_RELEASE       GENCODE release: M35 (mouse, default) or for example 47 (human).
+   ENSEMBL_SPECIES/ENSEMBL_RELEASE  For ensembl: for example rattus_norvegicus, 113.
+   CUSTOM_NAME/CUSTOM_GENOME_FA/CUSTOM_GTF  For custom: your own FASTA and GTF.
+   HTS_MIN_LENGTH        Shortest read kept after trimming; default 50.
    REF_DIR               Optional shared reference directory. Otherwise in WORKDIR.
    STAR_SJDB_OVERHANG    auto uses read length minus one; a number fixes it.
    COUNT_COLUMN          auto, 2 (unstranded), 3 (forward), or 4 (reverse).
@@ -81,8 +89,8 @@ RNAseq_STAR setup
    need compatible tool builds supplied by the user or site. Native macOS and
    container execution have not been validated.
 
-   ./run.sh all downloads the chosen GENCODE genome/GTF, verifies the release's
-   MD5 checksums, copies the included rRNA reference and builds or verifies a STAR
+   ./run.sh all downloads the chosen genome and annotation, verifies the
+   provider's checksums, prepares the rRNA reference and builds or verifies a STAR
    index. Existing conflicting references or an incomplete index cause an error.
    Reuse an index only when its reference hashes, STAR version and overhang match.
 

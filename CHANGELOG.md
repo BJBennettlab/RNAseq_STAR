@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-28
+
+- References for other organisms: `REFERENCE_SOURCE` selects GENCODE mouse (default, unchanged), GENCODE human,
+  any Ensembl species and release, or your own FASTA and GTF. Downloads are checked against the provider's
+  checksums, SHA-256 is recorded, and the genome and annotation must share chromosome names. For other sources the
+  HTStream rRNA count uses the annotation's rRNA genes or `RRNA_FASTA`. Small genomes get a smaller STAR
+  suffix-array index; mouse and human indexes are unchanged.
+- Single-end libraries (`LIBRARY_LAYOUT=single`), lanes without a provider checksum file (`SOURCE_MD5=none`
+  records SHA-256 instead) and a configurable post-trim minimum length (`HTS_MIN_LENGTH`, default 50; `check`
+  refuses reads shorter than it).
+- `check` refuses a Slurm account the user does not have and work or reference folders outside that SCINet
+  project's `/project` or `/90daydata`.
+
 ## 2026-10-26
 
 - With `EXECUTOR=slurm`, the stages usually run by hand (`stats`, `counts`, `htsqc`, `confirm`, `kmerqc`,

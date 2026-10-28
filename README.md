@@ -2,8 +2,9 @@
 
 By Dawson Budke ([@Dpbudke](https://github.com/Dpbudke)), Bennett Lab.
 
-Paired-end mouse RNA-seq: combine sequencing lanes, preprocess with HTStream,
-align with STAR, and produce checked gene counts and BAM files.
+RNA-seq from paired-end or single-end reads, for mouse, human, any Ensembl species
+or your own genome: combine sequencing lanes, preprocess with HTStream, align with
+STAR, and produce checked gene counts and BAM files.
 
 ## Setup and run
 
@@ -20,7 +21,8 @@ cd RNAseq_STAR
 ```
 
 Keep raw FASTQs in separate lane directories. Each lane must contain the same
-samples and its provider's `@md5Sum.md5` file. If a study was sequenced as
+samples and the provider's checksum file (`@md5Sum.md5` by default; set `SOURCE_MD5`
+to its name, or to `none` when the provider gave none). If a study was sequenced as
 separate pools on different lanes, run each pool as its own run and join the
 validated count tables afterwards with `scripts/combine_runs.py` (see
 [SETUP_INSTRUCTIONS.txt](SETUP_INSTRUCTIONS.txt)). Continue on Ceres:
@@ -36,7 +38,10 @@ python3 0_Setup/4_fetch_star.py
 ./run.sh status
 ```
 
-Set the output directory, raw lane paths and Slurm account in `run_settings.sh`.
+In `run_settings.sh`, set the output directory, the raw lane paths, your SCINet
+project as `SLURM_ACCOUNT`, the read layout (`LIBRARY_LAYOUT`, paired or single) and
+the reference (`REFERENCE_SOURCE`, below). `check` refuses an account you do not
+have, and work or reference folders outside that project's `/project` or `/90daydata`.
 `scan` shows filenames and sample naming; `check` checks settings and software.
 `all` submits dependent Slurm jobs. The numbered scripts still perform each stage.
 The STAR setup downloads a fixed, checksum-verified Linux build into this copy.
@@ -77,19 +82,31 @@ show how to repeat the checks.
 
 ## References and analysis choices
 
-The default is GRCm39 / GENCODE M35. The reference stage downloads the genome and
-gene annotation and checks GENCODE's MD5 list. `References/mouse_rrna.fasta` is
-already included for HTStream's rRNA measurement. Keep these inputs fixed within
-a study; they do not need routine updates. A different annotation release needs
-a new reference directory, index and run. See [reference inputs](docs/references.md)
-for what is included, what is downloaded, and the separate inputs needed by the
-original R analyses.
+`REFERENCE_SOURCE` picks the genome and annotation, pinned by release:
+
+| Settings | Reference |
+| --- | --- |
+| `gencode_mouse`, `GENCODE_RELEASE="M35"` (default) | GRCm39, GENCODE M35 |
+| `gencode_human`, `GENCODE_RELEASE="47"` | GRCh38, GENCODE 47 |
+| `ensembl`, `ENSEMBL_SPECIES="rattus_norvegicus"`, `ENSEMBL_RELEASE="113"` | any Ensembl species and release |
+| `custom`, `CUSTOM_NAME`, `CUSTOM_GENOME_FA`, `CUSTOM_GTF` | your own FASTA and GTF |
+
+The reference stage downloads the files, checks the provider's published checksums,
+records SHA-256 in `REF_DIR/reference_manifest.json`, and checks that the genome and
+annotation name chromosomes the same way. One `REF_DIR` holds one reference; point
+several runs at it and it is downloaded and indexed once. Keep the reference fixed
+within a study: providers keep old releases, so no update is needed, and a different
+release needs a new `REF_DIR`, index and run. HTStream's rRNA count is a QC figure:
+it uses `References/mouse_rrna.fasta` for GENCODE mouse, `RRNA_FASTA` when given, and
+otherwise the annotation's rRNA genes. See [reference inputs](docs/references.md) for
+details and the separate inputs needed by the original R analyses.
 
 Sample names retain underscores by default. Any number of lanes is supported.
 `COUNT_COLUMN=auto` checks strand estimates per sample and stops if they disagree;
 confirm the library preparation when interpreting this choice. HTStream's original
 duplicate removal and trimming are retained. rRNA is measured, not removed.
-Trimmed singletons are saved but not aligned by this paired-read workflow.
+In paired-end runs, trimmed singletons are saved but not aligned. `HTS_MIN_LENGTH`
+(default 50) is the shortest read kept after trimming; use about 30 for 50 bp reads.
 
 `4_DE_Analysis/` contains the original study-specific R analyses. They are not run
 by `all`; they need their own metadata, design and contrasts. GBRS and QTL mapping

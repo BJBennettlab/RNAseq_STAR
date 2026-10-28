@@ -12,6 +12,24 @@ can change gene IDs and counts.
 | `ensembl_mm_112.txt` | Gene annotation table in original R analyses | Not included; obtain the recorded Ensembl 112 export before using those analyses. Not needed for STAR counts |
 | Study metadata spreadsheets | Sample identities, groups and covariates for R analyses | Supplied for the study; not included in the reusable workflow |
 
+## Other organisms and your own files
+
+`REFERENCE_SOURCE` in `run_settings.sh` selects the source (GENCODE mouse is the default and keeps the file names
+above, so earlier reference folders and indexes stay valid):
+
+| Source | Settings | Files in REF_DIR | Checked against |
+| --- | --- | --- | --- |
+| GENCODE human | `gencode_human`, `GENCODE_RELEASE` (for example 47) | `genome.fa` (GRCh38 primary assembly), `annotation.gtf` | GENCODE `MD5SUMS` |
+| Ensembl | `ensembl`, `ENSEMBL_SPECIES` (the Ensembl folder name), `ENSEMBL_RELEASE` | `genome.fa` (primary assembly, or toplevel when there is none), `annotation.gtf` (the release's main GTF) | Ensembl `CHECKSUMS` |
+| Your own | `custom`, `CUSTOM_NAME`, `CUSTOM_GENOME_FA`, `CUSTOM_GTF` (plain or gzip) | copies as `genome.fa`, `annotation.gtf` | SHA-256 of your files, recorded |
+
+For these sources `rrna.fasta` holds the exons of the annotation's rRNA and Mt_rRNA genes, or a copy of
+`RRNA_FASTA` when it is set. The count is a QC figure only; it does not change gene counts, and an annotation that
+leaves out the rDNA repeat (as GRCh38 does) gives a low estimate. `reference_manifest.json` records the source,
+release, URLs, provider checksums and SHA-256 of every file. A REF_DIR holding another reference, or a file whose
+SHA-256 no longer matches, is refused. The STAR index job sizes the suffix-array index to the genome (small genomes
+such as yeast get a smaller one; mouse and human use STAR's default).
+
 The genome and GTF are stored in the configured REF_DIR, not in References/.
 The STAR index is built from them. Reuse those files for matching runs. For a
 different annotation release, select GENCODE_RELEASE in run_settings.sh, confirm

@@ -10,7 +10,11 @@ SLURM_ACCOUNT="YOUR_PROJECT"
 SLURM_PARTITION="ceres"
 SLURM_MAIL=""
 SAMPLE_NAME_STYLE="illumina"
-GENCODE_RELEASE="M35"
+LIBRARY_LAYOUT="paired"            # or single
+SOURCE_MD5="@md5Sum.md5"           # the provider's checksum file in each lane, or none
+REFERENCE_SOURCE="gencode_mouse"   # gencode_human, ensembl or custom (config.sh lists their settings)
+GENCODE_RELEASE="M35"              # gencode_human: for example 47
+# ENSEMBL_SPECIES="rattus_norvegicus"; ENSEMBL_RELEASE="113"   # for REFERENCE_SOURCE="ensembl"
 STAR_SJDB_OVERHANG="auto"
 COUNT_COLUMN="auto"
 # Optional: put references in a shared, writable reference directory.
