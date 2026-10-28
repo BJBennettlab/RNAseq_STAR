@@ -11,34 +11,34 @@ class Validation(unittest.TestCase):
         lanes=[]
         for lane in ['l1','l2']:
             d=self.root/lane;d.mkdir();lanes.append(d)
-            for s in ['DGADO_2','DGADO_10','Undetermined']:
+            for s in ['STUDY_2','STUDY_10','Undetermined']:
                 for mate in [1,2]:
                     with gzip.open(d/f'{s}_S1_L001_R{mate}_001.fastq.gz','wt') as f:f.write('@a\nACGT\n+\nIIII\n')
         return lanes
     def collect(self,lanes):
         return sample.collect(lanes,'s/_S[0-9]+_L[0-9]+$//',['_R1_001.fastq.gz','_R2_001.fastq.gz'],{'Undetermined'})
     def test_two_lanes(self):
-        names,rows=self.collect(self.lanes());self.assertEqual(names,['DGADO_2','DGADO_10']);self.assertEqual(len(rows),4)
+        names,rows=self.collect(self.lanes());self.assertEqual(names,['STUDY_2','STUDY_10']);self.assertEqual(len(rows),4)
     def test_missing_mate(self):
-        lanes=self.lanes();next(lanes[1].glob('DGADO_2*R2*')).unlink()
+        lanes=self.lanes();next(lanes[1].glob('STUDY_2*R2*')).unlink()
         with self.assertRaises(ValueError):self.collect(lanes)
     def test_missing_whole_sample(self):
         lanes=self.lanes()
-        for p in lanes[1].glob('DGADO_2*'):p.unlink()
+        for p in lanes[1].glob('STUDY_2*'):p.unlink()
         with self.assertRaises(ValueError):self.collect(lanes)
     def test_collision(self):
-        lanes=self.lanes();p=lanes[0]/'DGADO_2_S2_L001_R1_001.fastq.gz';p.write_bytes(b'x')
+        lanes=self.lanes();p=lanes[0]/'STUDY_2_S2_L001_R1_001.fastq.gz';p.write_bytes(b'x')
         with self.assertRaises(ValueError):self.collect(lanes)
     def test_prefix_names_keep_their_own_files(self):
         # A name that starts another name (S_1, S_10, S_100) must still get only its own files.
         lanes=[]
         for lane,number in [('l1',5),('l2',6)]:
             d=self.root/lane;d.mkdir();lanes.append(d)
-            for i,s in enumerate(['DOCHLN_1','DOCHLN_10','DOCHLN_100','DOCHLN_101'],1):
+            for i,s in enumerate(['MOUSE_1','MOUSE_10','MOUSE_100','MOUSE_101'],1):
                 for mate in [1,2]:
                     with gzip.open(d/f'{s}_S{i}_L00{number}_R{mate}_001.fastq.gz','wt') as f:f.write(f'@{s}\nACGT\n+\nIIII\n')
         names,rows=self.collect(lanes)
-        self.assertEqual(names,['DOCHLN_1','DOCHLN_10','DOCHLN_100','DOCHLN_101'])
+        self.assertEqual(names,['MOUSE_1','MOUSE_10','MOUSE_100','MOUSE_101'])
         self.assertEqual(len(rows),8)
         for name,lane,r1,r2,*_ in rows:
             self.assertTrue(Path(r1).name.startswith(name+'_S'));self.assertTrue(Path(r2).name.startswith(name+'_S'))

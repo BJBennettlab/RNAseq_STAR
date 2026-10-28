@@ -26,8 +26,7 @@ RNAseq_STAR setup
    Start in a writable project location, outside any raw lane or existing run.
 
    Clone the repository:
-     git clone https://github.com/Dpbudke/RNAseq_STAR.git
-   (Bennett lab members can also clone BJBennettlab/RNAseq_STAR.)
+     git clone https://github.com/BJBennettlab/RNAseq_STAR.git
      cd RNAseq_STAR
 
    On Ceres:
@@ -118,8 +117,8 @@ RNAseq_STAR setup
      ./run.sh samples
 
    For example:
-     DGADO_120_S23_L006_R1_001.fastq.gz -> DGADO_120  (illumina)
-     DGADO_120_S23_L006_R1_001.fastq.gz -> DGADO      (first_field, wrong here)
+     STUDY_120_S23_L006_R1_001.fastq.gz -> STUDY_120  (illumina)
+     STUDY_120_S23_L006_R1_001.fastq.gz -> STUDY      (first_field, wrong here)
 
    Read samples.txt and input_manifest.tsv in WORKDIR. Confirm that the names
    match the sample sheet and every sample has exactly one R1/R2 pair per lane.

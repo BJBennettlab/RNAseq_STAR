@@ -32,11 +32,11 @@ SLURM_PARTITION="ceres"
 # How a FASTQ filename becomes a sample name. ./run.sh scan shows both.
 #   illumina      strip the _S<n>_L<n> block
 #                   101_S13_L008_R1_001.fastq.gz          -> 101
-#                   DGADO_120_S23_L006_R1_001.fastq.gz    -> DGADO_120
+#                   STUDY_120_S23_L006_R1_001.fastq.gz    -> STUDY_120
 #                   245_ColumnCleaned_S167_L008_R1_001... -> 245_ColumnCleaned
 #   first_field   everything before the first underscore
 #                   101_S13_L008_R1_001.fastq.gz          -> 101
-#                   DGADO_120_S23_L006_R1_001.fastq.gz    -> DGADO   <- collides
+#                   STUDY_120_S23_L006_R1_001.fastq.gz    -> STUDY   <- collides
 #                   245_ColumnCleaned_S167_L008_R1_001... -> 245
 #   custom        set SAMPLE_REGEX below, applied with sed -E after the read
 #                 suffix is stripped

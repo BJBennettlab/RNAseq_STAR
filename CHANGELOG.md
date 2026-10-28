@@ -12,12 +12,12 @@
   refuses reads shorter than it).
 - `SOFTWARE_MODE=container`: STAR, SAMtools, HTStream and the QC Python libraries from a pinned image
   (`container/Dockerfile`, built by `.github/workflows/container.yml` as `ghcr.io/bjbennettlab/rnaseq_star`). On
-  DGADO_1 (paired-end) and the yeast single-end set it gave the same results as the Ceres modules; it carries the module's exact HTStream build.
+  a Bennett lab DO sample (paired-end) and the yeast single-end set it gave the same results as the Ceres modules; it carries the module's exact HTStream build.
 - `HTS_DEDUP=no` skips HTStream duplicate removal (default `yes`, unchanged). On the yeast single-end test it
   removed 83 to 85% of reads; `check` now warns when it is on for single-end reads.
 - `check` refuses a Slurm account the user does not have and work or reference folders outside that SCINet
   project's `/project` or `/90daydata`.
-- Checked on Ceres (October 28): DGA_DO sample DGADO_1 (two lanes, paired-end, GENCODE mouse) through this version
+- Checked on Ceres (October 28): a Bennett lab DO sample (two lanes, paired-end, GENCODE mouse) through this version
   gave the same gene counts, mapping statistics, trimmed reads, HTStream counts and reference manifests as the
   September 10, 2026 run; a public yeast single-end set (ENA PRJNA1365179, Ensembl release 113) ran through every
   stage and passed validation.
@@ -119,8 +119,8 @@
   that step moved ahead of it. 173 samples and 970 GB went from serial to 20
   minutes at 35 tasks at once.
 - Sample naming is a setting. `cut -d'_' -f1` returns everything before the
-  first underscore. On `DGADO_120_S23_L006_R1_001.fastq.gz`
-  that is `DGADO` for every sample in the run. `SAMPLE_NAME_STYLE` offers
+  first underscore. On `STUDY_120_S23_L006_R1_001.fastq.gz`
+  that is `STUDY` for every sample in the run. `SAMPLE_NAME_STYLE` offers
   `illumina`,
   `first_field` (the previous behavior) and `custom`.
 - Lane count and lane tags come from `LANE_DIRS`. Previously fixed at two lanes,
@@ -181,15 +181,9 @@
 ### Notes
 
 - The HTStream chain and the STAR command are unchanged.
-- `4_DE_Analysis/*.Rmd` are unchanged. They read `ensembl_mm_112.txt`,
-  `GRCm39_CCPups_redo_counts.txt` and `Data4R_db_03042024_FINAL.xlsx` by bare
-  filename. Those three were committed and later deleted, and are recoverable
-  from the git history:
-  ```
-  git show '791c371^:RStudio/ensembl_mm_112.txt' > ensembl_mm_112.txt
-  git show 'c142221^:RStudio/GRCm39_CCPups_redo_counts.txt' > GRCm39_CCPups_redo_counts.txt
-  git show '1705f47^:RStudio/GBRS/Data/Data4R_db_03042024_FINAL.xlsx' > Data4R_db_03042024_FINAL.xlsx
-  ```
+- `4_DE_Analysis/*.Rmd` are unchanged. They read an Ensembl annotation export,
+  a count table and a study spreadsheet by bare filename; those inputs are not in
+  this repository and come from the study's own records.
 - The `htstream/1.3.3` module on Ceres contains binaries that report 1.3.2.
 - The HTStream link in the previous README returned 404. It is
   https://s4hts.github.io/HTStream/ now.

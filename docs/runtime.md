@@ -99,7 +99,7 @@ image through small wrappers in `WORKDIR/.container_bin`; the workflow's own scr
 use the host's Python 3.11+ (`MODULE_PYTHON` on Ceres). `run_records/software.json`
 records the image's path and SHA-256.
 
-Checked on Ceres (October 28, 2026): DGA_DO sample DGADO_1 in container mode gave the
+Checked on Ceres (October 28, 2026): a Bennett lab DO sample in container mode gave the
 same gene counts, mapping statistics, trimmed reads and HTStream counts as the
 module run of September 10, 2026, and the yeast single-end test set (ENA PRJNA1365179)
 gave the same counts, trimmed reads and HTStream counts as its module run. An earlier image with a newer build of the same

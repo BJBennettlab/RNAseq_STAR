@@ -39,11 +39,9 @@ belongs in persistent project storage; processing outputs can go under `/90dayda
 Clone the repository:
 
 ```bash
-git clone https://github.com/Dpbudke/RNAseq_STAR.git
+git clone https://github.com/BJBennettlab/RNAseq_STAR.git
 cd RNAseq_STAR
 ```
-
-Bennett lab members can also clone the lab's copy, `BJBennettlab/RNAseq_STAR`.
 
 Keep raw FASTQs in separate lane directories. Each lane must contain the same
 samples and the provider's checksum file (`@md5Sum.md5` by default; set `SOURCE_MD5`
@@ -150,8 +148,8 @@ now also takes other organisms and single-end libraries.
 
 ## Related repository
 
-GBRS-based allele-specific expression analysis is in [RNAseq_GBRS](https://github.com/Dpbudke/RNAseq_GBRS).
+GBRS-based allele-specific expression analysis is in [RNAseq_GBRS](https://github.com/BJBennettlab/RNAseq_GBRS).
 
 ## Author
 
-Dawson Budke — dpbudke@ucdavis.edu
+Dawson Budke — dpbudke@ucdavis.edu. His original repository: [Dpbudke/RNAseq_STAR](https://github.com/Dpbudke/RNAseq_STAR).
