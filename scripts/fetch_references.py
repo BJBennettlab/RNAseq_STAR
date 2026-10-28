@@ -210,7 +210,8 @@ def rrna_from_annotation(genome, gtf, dest):
 
 def check_contigs(genome, gtf):
     """The genome and the annotation must name chromosomes the same way, or STAR counts nothing."""
-    fasta = {line[1:].split()[0] for line in genome.open() if line.startswith('>')}
+    with genome.open() as f:
+        fasta = {line[1:].split()[0] for line in f if line.startswith('>')}
     annotated = set()
     with gtf.open() as f:
         for line in f:
