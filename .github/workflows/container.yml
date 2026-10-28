@@ -18,6 +18,8 @@ permissions:
 
 jobs:
   image:
+    # Only the lab's copy publishes to the lab's registry.
+    if: github.repository_owner == 'BJBennettlab'
     runs-on: ubuntu-24.04
     steps:
       - name: Version
