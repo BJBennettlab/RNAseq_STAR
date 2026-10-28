@@ -48,8 +48,22 @@ SAMPLE_REGEX=""
 # sample. It is not a sample, and it is usually one of the largest files.
 EXCLUDE_SAMPLES=( "Undetermined" )
 
-# Reference genome release.
+# Reference genome and annotation, pinned by release (scripts/fetch_references.py, docs/references.md):
+#   gencode_mouse  GENCODE mouse, GENCODE_RELEASE like M35 (GRCm39). The lab's default.
+#   gencode_human  GENCODE human, GENCODE_RELEASE like 47 (GRCh38).
+#   ensembl        Any Ensembl species: ENSEMBL_SPECIES (the Ensembl folder name, for example
+#                  rattus_norvegicus) and ENSEMBL_RELEASE (for example 113).
+#   custom         Your own files: CUSTOM_NAME, CUSTOM_GENOME_FA and CUSTOM_GTF (plain or gzip).
+# The HTStream rRNA count (a QC figure; it removes nothing) uses the repository's mouse rRNA file for
+# gencode_mouse. For other sources it uses RRNA_FASTA when set, otherwise the annotation's rRNA genes.
+REFERENCE_SOURCE="gencode_mouse"
 GENCODE_RELEASE="M35"
+ENSEMBL_SPECIES=""
+ENSEMBL_RELEASE=""
+CUSTOM_NAME=""
+CUSTOM_GENOME_FA=""
+CUSTOM_GTF=""
+RRNA_FASTA=""
 
 # Where the genome, annotation and STAR index live. Point several runs at the
 # same directory and they are downloaded and built once, not per run.
@@ -115,18 +129,27 @@ SAMPLES_TXT="${WORKDIR}/samples.txt"
 SLURMOUT="${WORKDIR}/slurmout"
 
 # --- references --------------------------------------------------------------
-GENCODE_BASE="https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_${GENCODE_RELEASE}"
-GENOME_FA_URL="${GENCODE_BASE}/GRCm39.primary_assembly.genome.fa.gz"
-GTF_URL="${GENCODE_BASE}/gencode.v${GENCODE_RELEASE}.annotation.gtf.gz"
-RRNA_URL="https://ucdavis-bioinformatics-training.github.io/2025-June-RNA-Seq-Analysis/data_reduction/mouse_rrna.fasta"
+# One reference per REF_DIR. GENCODE mouse keeps the file and index names of the lab's earlier runs, so those
+# reference folders and indexes are reused as they are; every other source uses the names below.
+case "$REFERENCE_SOURCE" in
+    gencode_mouse)
+        REFERENCE_TAG="gencode.${GENCODE_RELEASE}"
+        GENOME_FA="${REF_DIR}/GRCm39.primary_assembly.genome.fa"
+        GTF="${REF_DIR}/gencode.v${GENCODE_RELEASE}.annotation.gtf"
+        # mouse_rrna.fasta ships with this repo (UC Davis RNA-seq workshop); the fetch job copies it into REF_DIR.
+        RRNA_FA="${REF_DIR}/mouse_rrna.fasta" ;;
+    gencode_human) REFERENCE_TAG="gencode_human.${GENCODE_RELEASE}" ;;
+    ensembl)       REFERENCE_TAG="ensembl.${ENSEMBL_SPECIES}.${ENSEMBL_RELEASE}" ;;
+    custom)        REFERENCE_TAG="custom.${CUSTOM_NAME}" ;;
+    *) echo "config.sh: REFERENCE_SOURCE must be gencode_mouse, gencode_human, ensembl or custom" >&2; return 1 ;;
+esac
+if [[ "$REFERENCE_SOURCE" != gencode_mouse ]]; then
+    GENOME_FA="${REF_DIR}/genome.fa"
+    GTF="${REF_DIR}/annotation.gtf"
+    RRNA_FA="${REF_DIR}/rrna.fasta"
+fi
 
-GENOME_FA="${REF_DIR}/GRCm39.primary_assembly.genome.fa"
-GTF="${REF_DIR}/gencode.v${GENCODE_RELEASE}.annotation.gtf"
-# mouse_rrna.fasta ships with this repo. 0_Setup/1_fetch_references.slurm copies
-# it into REF_DIR, and falls back to the URL above if it is not there.
-RRNA_FA="${REF_DIR}/mouse_rrna.fasta"
-
-STAR_INDEX="${REF_DIR}/star.overlap${STAR_SJDB_OVERHANG}.gencode.${GENCODE_RELEASE}"
+STAR_INDEX="${REF_DIR}/star.overlap${STAR_SJDB_OVERHANG}.${REFERENCE_TAG}"
 
 # --- counts ------------------------------------------------------------------
 # Column of STAR's ReadsPerGene.out.tab.

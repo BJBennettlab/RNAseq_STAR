@@ -21,8 +21,10 @@ class ReferenceResumeChecks(unittest.TestCase):
         ) as directory:
             root = Path(directory)
             names = ["GRCm39.primary_assembly.genome.fa", "gencode.vM35.annotation.gtf"]
+            # A minimal genome and annotation that share a chromosome name (the fetcher checks that at the end).
+            contents = {names[0]: b">chr1\nACGT\n", names[1]: b'chr1\tT\texon\t1\t4\t.\t+\t.\tgene_id "G";\n'}
             for name in names:
-                (root / name).write_bytes(b"reference content")
+                (root / name).write_bytes(contents[name])
             rrna = root / "rrna_source.fasta"
             rrna.write_bytes(b">rRNA\nACGT\n")
             source_md5 = "a" * 32

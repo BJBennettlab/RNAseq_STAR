@@ -1,7 +1,7 @@
 #!/bin/bash
 # Build the STAR genome index. Once per genome, annotation and read length.
 #
-# The index directory is named for the overhang and the GENCODE release, so
+# The index directory is named for the overhang and the reference (REFERENCE_TAG), so
 # indexes for different read lengths can sit side by side in the same REF_DIR.
 # If the index is already there the job reports it and exits without rebuilding.
 #

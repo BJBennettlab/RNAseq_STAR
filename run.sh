@@ -225,10 +225,10 @@ PYCHECK
         echo "# written by ./run.sh check on $(date '+%Y-%m-%d %H:%M')"
         echo "READ_LENGTH=${rl}"
         echo "STAR_SJDB_OVERHANG=${overhang}"
-        echo "STAR_INDEX=\"${REF_DIR}/star.overlap${overhang}.gencode.${GENCODE_RELEASE}\""
+        echo "STAR_INDEX=\"${REF_DIR}/star.overlap${overhang}.${REFERENCE_TAG}\""
     } > "${WORKDIR}/resolved.sh"
     ok "wrote ${WORKDIR}/resolved.sh"
-    ok "STAR index will be ${REF_DIR}/star.overlap${overhang}.gencode.${GENCODE_RELEASE}"
+    ok "STAR index will be ${REF_DIR}/star.overlap${overhang}.${REFERENCE_TAG}"
     echo
     echo "config looks good. next: ./run.sh all"
 }
@@ -236,7 +236,8 @@ PYCHECK
 record_run() (
     load_software "$MODULE_PYTHON" "$MODULE_HTSTREAM" "$MODULE_STAR" "$MODULE_SAMTOOLS"
     mkdir -p "$WORKDIR/run_records"
-    declare -p WORKDIR LANE_DIRS REF_DIR GENCODE_RELEASE STAR_SJDB_OVERHANG COUNT_COLUMN \
+    declare -p WORKDIR LANE_DIRS REF_DIR REFERENCE_SOURCE REFERENCE_TAG GENCODE_RELEASE ENSEMBL_SPECIES \
+        ENSEMBL_RELEASE CUSTOM_NAME CUSTOM_GENOME_FA CUSTOM_GTF RRNA_FASTA STAR_SJDB_OVERHANG COUNT_COLUMN \
         SAMPLE_NAME_STYLE SAMPLE_REGEX EXCLUDE_SAMPLES FASTQ_SUFFIX_R1 FASTQ_SUFFIX_R2 \
         EXECUTOR SOFTWARE_MODE LOCAL_THREADS SLURM_ACCOUNT SLURM_PARTITION SLURM_MAIL \
         MODULE_STAR MODULE_HTSTREAM MODULE_PYTHON MODULE_SAMTOOLS \

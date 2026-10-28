@@ -2,9 +2,9 @@
 # Download the genome FASTA, the annotation GTF and the rRNA FASTA into REF_DIR.
 # Anything already present is left alone, so this is safe to re-run.
 #
-# Verifies the gzip of each download, then checks that the FASTA and GTF use the
-# same contig naming. A mismatch there builds an index with no annotation and a
-# count matrix of zeros, so the job stops instead.
+# Checks each download against the provider's published checksum, records SHA-256,
+# then checks that the FASTA and GTF use the same contig naming. A mismatch there
+# builds an index with no annotation and a count matrix of zeros, so the job stops.
 #
 #   ./run.sh references
 #SBATCH --job-name=fetch_refs
@@ -37,5 +37,12 @@ HERE="$(find_pipeline_root)" || exit 1
 source "${HERE}/config.sh"
 load_software "${MODULE_PYTHON}"
 
-python3 "${HERE}/scripts/fetch_references.py" --directory "$REF_DIR" \
-    --release "$GENCODE_RELEASE" --rrna "$HERE/References/mouse_rrna.fasta"
+args=(--directory "$REF_DIR" --source "$REFERENCE_SOURCE")
+case "$REFERENCE_SOURCE" in
+    gencode_mouse) args+=(--release "$GENCODE_RELEASE" --rrna "$HERE/References/mouse_rrna.fasta") ;;
+    gencode_human) args+=(--release "$GENCODE_RELEASE") ;;
+    ensembl)       args+=(--species "$ENSEMBL_SPECIES" --release "$ENSEMBL_RELEASE") ;;
+    custom)        args+=(--name "$CUSTOM_NAME" --genome-fa "$CUSTOM_GENOME_FA" --gtf "$CUSTOM_GTF") ;;
+esac
+if [[ -n "$RRNA_FASTA" && "$REFERENCE_SOURCE" != gencode_mouse ]]; then args+=(--rrna "$RRNA_FASTA"); fi
+python3 "${HERE}/scripts/fetch_references.py" "${args[@]}"
