@@ -63,7 +63,13 @@ if [[ "${STAR_SJDB_OVERHANG}" == "auto" ]]; then
     echo "ERROR: STAR_SJDB_OVERHANG is still \"auto\". Run ./run.sh check first." >&2
     exit 1
 fi
-echo "threads: ${threads}   sjdbOverhang: ${STAR_SJDB_OVERHANG}"
+# Small genomes need a smaller suffix-array index (STAR manual: min(14, log2(genome length)/2 - 1)). Mouse and
+# human give 14, STAR's default, so their command is unchanged; the option is added only below 14.
+genome_bp=$(awk '!/^>/ { n += length($0) } END { print n }' "${GENOME_FA}")
+sa_nbases=$(awk -v n="$genome_bp" 'BEGIN { v = int(log(n) / log(2) / 2 - 1); print (v < 14 ? v : 14) }')
+extra=()
+(( sa_nbases < 14 )) && extra=(--genomeSAindexNbases "$sa_nbases")
+echo "threads: ${threads}   sjdbOverhang: ${STAR_SJDB_OVERHANG}   genome: ${genome_bp} bp   SAindexNbases: ${sa_nbases}"
 echo "fasta:   ${GENOME_FA}"
 echo "gtf:     ${GTF}"
 echo "out:     ${STAR_INDEX}"
@@ -78,7 +84,8 @@ STAR \
     --genomeDir "${STAR_INDEX}" \
     --genomeFastaFiles "${GENOME_FA}" \
     --sjdbGTFfile "${GTF}" \
-    --sjdbOverhang "${STAR_SJDB_OVERHANG}"
+    --sjdbOverhang "${STAR_SJDB_OVERHANG}" \
+    "${extra[@]+"${extra[@]}"}"
 
 echo
 echo "=== index contents ==="
