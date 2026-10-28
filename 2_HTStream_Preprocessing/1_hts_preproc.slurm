@@ -10,7 +10,7 @@
 #   hts_PolyATTrim     trim poly-A/poly-T tails
 #   hts_NTrimmer       trim remaining N bases
 #   hts_QWindowTrim    quality trim read ends
-#   hts_LengthFilter   discard reads shorter than 50 bp
+#   hts_LengthFilter   discard reads shorter than HTS_MIN_LENGTH (default 50 bp)
 #   hts_Stats          final statistics, and writes the trimmed FASTQs
 #
 # Output per sample: <sample>.json and, for paired runs, <sample>_R1.fastq.gz,
@@ -87,7 +87,7 @@ hts_AdapterTrimmer -A "${json}" -N 'trim adapters' | \
 hts_PolyATTrim     -A "${json}" -N 'remove polyAT' | \
 hts_NTrimmer       -A "${json}" -N 'remove any remaining N characters' | \
 hts_QWindowTrim    -A "${json}" -N 'quality trim the ends of reads' | \
-hts_LengthFilter   -A "${json}" -N 'remove reads < 50bp' -n -m 50 | \
+hts_LengthFilter   -A "${json}" -N "remove reads < ${HTS_MIN_LENGTH}bp" -n -m "${HTS_MIN_LENGTH}" | \
 hts_Stats          -A "${json}" -N 'final stats' -f "${outdir}/${sample}"
 
 # The pipeline is one shell pipeline; without pipefail a failure in any stage

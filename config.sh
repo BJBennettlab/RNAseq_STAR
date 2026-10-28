@@ -121,6 +121,9 @@ esac
 # The provider's checksum file in each lane directory (UC Davis Genome Center: @md5Sum.md5). Set SOURCE_MD5=none
 # only when the provider gave none; the md5 step then records each FASTQ's SHA-256 instead of checking it.
 SOURCE_MD5="${SOURCE_MD5:-@md5Sum.md5}"
+# HTStream drops reads shorter than this after trimming. 50 suits 100 to 150 bp reads; use about 30 for 50 bp reads.
+HTS_MIN_LENGTH="${HTS_MIN_LENGTH:-50}"
+[[ "$HTS_MIN_LENGTH" =~ ^[0-9]+$ ]] || { echo "config.sh: HTS_MIN_LENGTH must be a number" >&2; return 1; }
 
 case "${SAMPLE_NAME_STYLE}" in
     illumina)    SAMPLE_REGEX='s/_S[0-9]+_L[0-9]+$//' ;;

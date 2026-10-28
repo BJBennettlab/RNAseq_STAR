@@ -225,6 +225,11 @@ PYCHECK
     rl=$(read_length "$one")
     if [[ "${STAR_SJDB_OVERHANG}" == "auto" ]]; then overhang=$((rl - 1)); else overhang="${STAR_SJDB_OVERHANG}"; fi
     ok "read length ${rl} bp, --sjdbOverhang ${overhang}"
+    if (( rl < HTS_MIN_LENGTH )); then
+        red "reads (${rl} bp) are shorter than HTS_MIN_LENGTH (${HTS_MIN_LENGTH}); every read would be dropped"; return 1
+    elif (( rl < HTS_MIN_LENGTH + 20 )); then
+        warn "reads (${rl} bp) are close to HTS_MIN_LENGTH (${HTS_MIN_LENGTH}); trimmed reads below it are dropped"
+    fi
 
     mkdir -p "${WORKDIR}"
     {
@@ -244,7 +249,7 @@ record_run() (
     mkdir -p "$WORKDIR/run_records"
     declare -p WORKDIR LANE_DIRS REF_DIR REFERENCE_SOURCE REFERENCE_TAG GENCODE_RELEASE ENSEMBL_SPECIES \
         ENSEMBL_RELEASE CUSTOM_NAME CUSTOM_GENOME_FA CUSTOM_GTF RRNA_FASTA STAR_SJDB_OVERHANG COUNT_COLUMN \
-        SAMPLE_NAME_STYLE SAMPLE_REGEX EXCLUDE_SAMPLES FASTQ_SUFFIX_R1 FASTQ_SUFFIX_R2 LIBRARY_LAYOUT SOURCE_MD5 \
+        SAMPLE_NAME_STYLE SAMPLE_REGEX EXCLUDE_SAMPLES FASTQ_SUFFIX_R1 FASTQ_SUFFIX_R2 LIBRARY_LAYOUT SOURCE_MD5 HTS_MIN_LENGTH \
         EXECUTOR SOFTWARE_MODE LOCAL_THREADS SLURM_ACCOUNT SLURM_PARTITION SLURM_MAIL \
         MODULE_STAR MODULE_HTSTREAM MODULE_PYTHON MODULE_SAMTOOLS \
         > "$WORKDIR/run_records/settings_snapshot.sh"
