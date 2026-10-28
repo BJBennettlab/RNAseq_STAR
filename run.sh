@@ -183,6 +183,14 @@ do_check() {
         for m in "$MODULE_PYTHON" "$MODULE_HTSTREAM" "$MODULE_STAR" "$MODULE_SAMTOOLS"; do
             if (load_software "$m") >/dev/null 2>&1; then ok "$m"; else red "cannot load module $m"; bad=1; fi
         done
+    elif [[ "$SOFTWARE_MODE" == container ]]; then
+        # Apptainer may not run on a login node; the jobs run the image. Here: the image is there, apptainer exists.
+        [[ -r "$STAR_SIF" ]] && ok "image $STAR_SIF" || { red "STAR_SIF is not a readable image: ${STAR_SIF:-unset}"; bad=1; }
+        if command -v apptainer >/dev/null || { type module >/dev/null 2>&1 && module -t avail "$MODULE_APPTAINER" 2>&1 | grep -q .; }; then
+            ok "apptainer"
+        else
+            red "apptainer is unavailable (MODULE_APPTAINER=$MODULE_APPTAINER)"; bad=1
+        fi
     else
         for tool in python3 STAR samtools hts_Stats hts_SeqScreener hts_SuperDeduper hts_AdapterTrimmer hts_PolyATTrim hts_NTrimmer hts_QWindowTrim hts_LengthFilter md5sum zcat; do
             command -v "$tool" >/dev/null || { red "$tool is not on PATH"; bad=1; }
@@ -250,10 +258,10 @@ record_run() (
     declare -p WORKDIR LANE_DIRS REF_DIR REFERENCE_SOURCE REFERENCE_TAG GENCODE_RELEASE ENSEMBL_SPECIES \
         ENSEMBL_RELEASE CUSTOM_NAME CUSTOM_GENOME_FA CUSTOM_GTF RRNA_FASTA STAR_SJDB_OVERHANG COUNT_COLUMN \
         SAMPLE_NAME_STYLE SAMPLE_REGEX EXCLUDE_SAMPLES FASTQ_SUFFIX_R1 FASTQ_SUFFIX_R2 LIBRARY_LAYOUT SOURCE_MD5 HTS_MIN_LENGTH \
-        EXECUTOR SOFTWARE_MODE LOCAL_THREADS SLURM_ACCOUNT SLURM_PARTITION SLURM_MAIL \
+        EXECUTOR SOFTWARE_MODE STAR_SIF LOCAL_THREADS SLURM_ACCOUNT SLURM_PARTITION SLURM_MAIL \
         MODULE_STAR MODULE_HTSTREAM MODULE_PYTHON MODULE_SAMTOOLS \
         > "$WORKDIR/run_records/settings_snapshot.sh"
-    python3 "$HERE/scripts/record_run.py" "$HERE" "$WORKDIR" "${PIPELINE_CONFIG:-}"
+    SOFTWARE_MODE="$SOFTWARE_MODE" STAR_SIF="$STAR_SIF" python3 "$HERE/scripts/record_run.py" "$HERE" "$WORKDIR" "${PIPELINE_CONFIG:-}"
 )
 
 # ---------------------------------------------------------------- submit

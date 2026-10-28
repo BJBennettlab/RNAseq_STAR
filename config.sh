@@ -90,7 +90,25 @@ elif [[ -n "${PIPELINE_CONFIG:-}" ]]; then
     return 1
 fi
 case "$EXECUTOR" in slurm|local) ;; *) echo "EXECUTOR must be slurm or local" >&2; return 1;; esac
-case "$SOFTWARE_MODE" in modules|path) ;; *) echo "SOFTWARE_MODE must be modules or path" >&2; return 1;; esac
+case "$SOFTWARE_MODE" in modules|path|container) ;; *) echo "SOFTWARE_MODE must be modules, path or container" >&2; return 1;; esac
+# SOFTWARE_MODE=container: STAR, SAMtools, HTStream and the QC scripts' Python libraries run in the image STAR_SIF
+# (container/Dockerfile, ghcr.io/bjbennettlab/rnaseq_star); the pipeline's own scripts use the host's Python 3.11+
+# (MODULE_PYTHON where modules exist). Apptainer runs the image.
+STAR_SIF="${STAR_SIF:-}"
+MODULE_APPTAINER="${MODULE_APPTAINER:-apptainer}"
+container_tools() {
+    # One small wrapper per tool in WORKDIR/.container_bin, first on PATH, so every script runs them unchanged.
+    local dir="${WORKDIR}/.container_bin" t inner
+    [[ -r "$STAR_SIF" ]] || { echo "STAR_SIF is not a readable image: ${STAR_SIF:-unset}" >&2; return 1; }
+    mkdir -p "$dir" || return $?
+    for t in STAR samtools hts_Stats hts_SeqScreener hts_SuperDeduper hts_AdapterTrimmer hts_PolyATTrim \
+             hts_NTrimmer hts_QWindowTrim hts_LengthFilter python; do
+        inner=$t; [[ $t == python ]] && inner=python3
+        printf '#!/bin/bash\nexec apptainer exec "%s" %s "$@"\n' "$STAR_SIF" "$inner" > "$dir/$t.$$" || return $?
+        chmod 0755 "$dir/$t.$$" && mv -f "$dir/$t.$$" "$dir/$t" || return $?
+    done
+    case ":$PATH:" in *":$dir:"*) ;; *) PATH="$dir:$PATH" ;; esac
+}
 load_software() {
     if [[ "$SOFTWARE_MODE" == modules ]]; then
         type module >/dev/null 2>&1 || { echo "Environment modules are unavailable; use SOFTWARE_MODE=path for installed programs" >&2; return 1; }
@@ -98,6 +116,12 @@ load_software() {
         # Some tool modules include another python3. Keep the selected Python first.
         module unload "$MODULE_PYTHON" || return $?
         module load "$MODULE_PYTHON" || return $?
+    elif [[ "$SOFTWARE_MODE" == container ]]; then
+        if type module >/dev/null 2>&1; then
+            module load "$MODULE_PYTHON" || return $?
+            command -v apptainer >/dev/null || module load "$MODULE_APPTAINER" >/dev/null 2>&1 || true
+        fi
+        container_tools || return $?
     fi
 }
 # The optional setup installs a checksum-verified STAR build inside this copy.

@@ -36,17 +36,27 @@ source "${HERE}/config.sh"
 load_software "${MODULE_PYTHON}"
 echo "python: $(python3 --version)"
 
-if [[ -x "${PY_VENV}/bin/python" ]]; then
-    echo "venv already at ${PY_VENV}"
+if [[ "$SOFTWARE_MODE" == container ]]; then
+    # The image holds requirements.txt's packages; PY_VENV/bin/python runs its Python.
+    mkdir -p "${PY_VENV}/bin"
+    ln -sfn "${WORKDIR}/.container_bin/python" "${PY_VENV}/bin/python"
+    "${PY_VENV}/bin/python" - > "${WORKDIR}/python_packages.txt" <<'PYLIST'
+import importlib.metadata as m
+print("\n".join(sorted(f"{d.metadata['Name']}=={d.version}" for d in m.distributions())))
+PYLIST
 else
-    python3 -m venv "${PY_VENV}"
+    if [[ -x "${PY_VENV}/bin/python" ]]; then
+        echo "venv already at ${PY_VENV}"
+    else
+        python3 -m venv "${PY_VENV}"
+    fi
+
+    # pip caches into $HOME by default; keep it inside the run directory.
+    export PIP_CACHE_DIR="${PY_VENV}/.pip-cache"
+
+    "${PY_VENV}/bin/python" -m pip install -r "${HERE}/requirements.txt"
+    "${PY_VENV}/bin/python" -m pip freeze > "${WORKDIR}/python_packages.txt"
 fi
-
-# pip caches into $HOME by default; keep it inside the run directory.
-export PIP_CACHE_DIR="${PY_VENV}/.pip-cache"
-
-"${PY_VENV}/bin/python" -m pip install -r "${HERE}/requirements.txt"
-"${PY_VENV}/bin/python" -m pip freeze > "${WORKDIR}/python_packages.txt"
 
 echo
 echo "=== installed ==="

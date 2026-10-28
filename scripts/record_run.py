@@ -71,7 +71,11 @@ def record(root, work, settings):
     if any("\n" in str(path) or "\\" in str(path) for _, path in hashes):
         raise ValueError("Unsupported source path for checksum manifest")
     programs = {}
-    for name in ["STAR", "samtools", "hts_Stats", "python3"]:
+    if os.environ.get("SOFTWARE_MODE") == "container":
+        # The tools run inside the image; its checksum fixes their versions (container/Dockerfile).
+        image = Path(os.environ["STAR_SIF"]).resolve()
+        programs["container"] = {"path": str(image), "sha256": digest(image)}
+    for name in [] if programs else ["STAR", "samtools", "hts_Stats", "python3"]:
         executable = shutil.which(name)
         if executable is None:
             raise ValueError("Required executable is unavailable: " + name)
