@@ -101,7 +101,8 @@ records the image's path and SHA-256.
 
 Checked on Ceres (October 28, 2026): DGA_DO sample DGADO_1 in container mode gave the
 same gene counts, mapping statistics, trimmed reads and HTStream counts as the
-module run of September 10, 2026. An earlier image with a newer build of the same
+module run of September 10, 2026, and the yeast single-end test set (ENA PRJNA1365179)
+gave the same counts, trimmed reads and HTStream counts as its module run. An earlier image with a newer build of the same
 HTStream version (Boost 1.85) differed in 5 of 57,132 genes by at most 2 reads,
 from adapter trimming of overlapping pairs; that is why the image pins the module's
 build.
