@@ -10,6 +10,9 @@
 - Single-end libraries (`LIBRARY_LAYOUT=single`), lanes without a provider checksum file (`SOURCE_MD5=none`
   records SHA-256 instead) and a configurable post-trim minimum length (`HTS_MIN_LENGTH`, default 50; `check`
   refuses reads shorter than it).
+- `SOFTWARE_MODE=container`: STAR, SAMtools, HTStream and the QC Python libraries from a pinned image
+  (`container/Dockerfile`, built by `.github/workflows/container.yml` as `ghcr.io/bjbennettlab/rnaseq_star`). On
+  DGADO_1 it gave the same results as the Ceres modules; it carries the module's exact HTStream build.
 - `HTS_DEDUP=no` skips HTStream duplicate removal (default `yes`, unchanged). On the yeast single-end test it
   removed 83 to 85% of reads; `check` now warns when it is on for single-end reads.
 - `check` refuses a Slurm account the user does not have and work or reference folders outside that SCINet

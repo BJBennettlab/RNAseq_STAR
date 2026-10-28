@@ -87,8 +87,9 @@ RNAseq_STAR setup
 
    For path mode, activate the required programs before running run.sh. The STAR
    installer above also works on Linux x86_64 without modules. Other architectures
-   need compatible tool builds supplied by the user or site. Native macOS and
-   container execution have not been validated.
+   need compatible tool builds supplied by the user or site. Native macOS has
+   not been validated. Container execution (SOFTWARE_MODE=container) is described
+   in docs/runtime.md.
 
    ./run.sh all downloads the chosen genome and annotation, verifies the
    provider's checksums, prepares the rRNA reference and builds or verifies a STAR

@@ -17,6 +17,9 @@ GENCODE_RELEASE="M35"              # gencode_human: for example 47
 # ENSEMBL_SPECIES="rattus_norvegicus"; ENSEMBL_RELEASE="113"   # for REFERENCE_SOURCE="ensembl"
 STAR_SJDB_OVERHANG="auto"
 COUNT_COLUMN="auto"
+# Optional: run the tools from the lab's image instead of modules (docs/runtime.md).
+# SOFTWARE_MODE="container"
+# STAR_SIF="/project/YOUR_PROJECT/containers/rnaseq_star_1.0.0.sif"
 # Optional: put references in a shared, writable reference directory.
 # REF_DIR="/90daydata/YOUR_PROJECT/references/gencode_m35"
 # STAR_CPUS=8

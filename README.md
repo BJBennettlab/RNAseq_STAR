@@ -46,6 +46,10 @@ have, and work or reference folders outside that project's `/project` or `/90day
 `all` submits dependent Slurm jobs. The numbered scripts still perform each stage.
 The STAR setup downloads a fixed, checksum-verified Linux build into this copy.
 
+`SOFTWARE_MODE=container` runs STAR, SAMtools and HTStream from the lab's pinned
+image (`ghcr.io/bjbennettlab/rnaseq_star`) instead of Ceres modules; it gives the same
+results as the modules ([runtime setup](docs/runtime.md#container-image-software_modecontainer)).
+
 On **another Linux system**, use `examples/linux.sh`. Install or activate Python
 3.11+, HTStream, STAR, SAMtools and GNU command-line tools first. Local mode runs
 one sample at a time without Slurm; keep the process running until it finishes.

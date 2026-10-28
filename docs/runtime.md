@@ -68,9 +68,43 @@ Use the tool maintainers' installation instructions for a compatible build:
 [SAMtools](https://www.htslib.org/download/),
 [STAR](https://github.com/alexdobin/STAR).
 The included installer supplies only the pinned STAR Linux x86_64 build. Other
-architectures and native macOS are not covered by that binary. Container execution
-has not been validated. Keep a new software environment separate until a matched
-input run passes the same count, BAM and QC checks.
+architectures and native macOS are not covered by that binary. Keep a new software
+environment separate until a matched input run passes the same count, BAM and QC checks.
+
+## Container image (SOFTWARE_MODE=container)
+
+`container/Dockerfile` puts the Ceres software in one image: the same official STAR
+2.7.11b binary (same SHA-256), the exact conda build of the Ceres `htstream/1.3.3`
+module (`h39f6147_2`, Boost 1.74; its binaries have the module's SHA-256), SAMtools
+1.17 and Python 3.11 with `requirements.txt`. `container/pixi.lock` locks every
+package and the base images are pinned by digest. The GitHub Actions workflow
+`.github/workflows/container.yml` builds it when a version tag (`v1.0.0`) is pushed
+and publishes `ghcr.io/bjbennettlab/rnaseq_star:<version>`; a published version is
+never rebuilt.
+
+To use it, pull the image once into a `.sif` file in a Slurm job (Apptainer does not
+run on Ceres login nodes) and name it in `run_settings.sh`:
+
+```bash
+apptainer pull rnaseq_star_1.0.0.sif docker://ghcr.io/bjbennettlab/rnaseq_star:1.0.0
+```
+
+```bash
+SOFTWARE_MODE="container"
+STAR_SIF="/project/YOUR_PROJECT/containers/rnaseq_star_1.0.0.sif"
+```
+
+STAR, SAMtools, HTStream and the Python libraries of the QC scripts then run in the
+image through small wrappers in `WORKDIR/.container_bin`; the workflow's own scripts
+use the host's Python 3.11+ (`MODULE_PYTHON` on Ceres). `run_records/software.json`
+records the image's path and SHA-256.
+
+Checked on Ceres (October 28, 2026): DGA_DO sample DGADO_1 in container mode gave the
+same gene counts, mapping statistics, trimmed reads and HTStream counts as the
+module run of September 10, 2026. An earlier image with a newer build of the same
+HTStream version (Boost 1.85) differed in 5 of 57,132 genes by at most 2 reads,
+from adapter trimming of overlapping pairs; that is why the image pins the module's
+build.
 
 Other Slurm sites may use SOFTWARE_MODE=path after activating software, or set
 MODULE_PYTHON, MODULE_HTSTREAM, MODULE_STAR and MODULE_SAMTOOLS to their module names.
