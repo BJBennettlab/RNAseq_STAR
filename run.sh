@@ -80,7 +80,8 @@ do_scan() {
             tags=$(find "$d" -maxdepth 1 -name "*.fastq.gz" -printf '%f\n' 2>/dev/null \
                    | sed -nE 's/.*_(L[0-9]+)_R[12]_001\.fastq\.gz/\1/p' | sort -u | tr '\n' ' ')
             printf '  %s\n    R1=%s R2=%s  lane tags: %s\n' "$d" "$n1" "$n2" "${tags:-none}"
-            [[ "$n1" == "$n2" ]] || { red "R1 and R2 counts differ in $d"; bad=1; }
+            [[ "$LIBRARY_LAYOUT" == single || "$n1" == "$n2" ]] || { red "R1 and R2 counts differ in $d"; bad=1; }
+            [[ "$LIBRARY_LAYOUT" == paired || "$n2" == 0 ]] || warn "R2 files in $d are ignored (LIBRARY_LAYOUT=single)"
             [[ "$n1" -gt 0 ]] || { red "no ${FASTQ_SUFFIX_R1} files in $d"; bad=1; }
         else
             red "not a directory: $d"; bad=1
@@ -166,9 +167,14 @@ do_check() {
         fi
     fi
 
-    echo "=== lanes ==="
+    echo "=== lanes ($LIBRARY_LAYOUT-end) ==="
     for d in "${LANE_DIRS[@]}"; do
         [[ -d "$d" ]] && ok "$d" || { red "missing $d"; bad=1; }
+        if [[ "$SOURCE_MD5" == none ]]; then
+            warn "SOURCE_MD5=none: $d is not checked against provider checksums (SHA-256 is recorded)"
+        elif [[ -d "$d" && ! -s "$d/$SOURCE_MD5" ]]; then
+            red "no $SOURCE_MD5 in $d (set SOURCE_MD5 to the provider's checksum file, or none)"; bad=1
+        fi
     done
     [[ ${#LANE_DIRS[@]} -ge 1 ]] || { red "LANE_DIRS is empty"; bad=1; }
 
@@ -238,7 +244,7 @@ record_run() (
     mkdir -p "$WORKDIR/run_records"
     declare -p WORKDIR LANE_DIRS REF_DIR REFERENCE_SOURCE REFERENCE_TAG GENCODE_RELEASE ENSEMBL_SPECIES \
         ENSEMBL_RELEASE CUSTOM_NAME CUSTOM_GENOME_FA CUSTOM_GTF RRNA_FASTA STAR_SJDB_OVERHANG COUNT_COLUMN \
-        SAMPLE_NAME_STYLE SAMPLE_REGEX EXCLUDE_SAMPLES FASTQ_SUFFIX_R1 FASTQ_SUFFIX_R2 \
+        SAMPLE_NAME_STYLE SAMPLE_REGEX EXCLUDE_SAMPLES FASTQ_SUFFIX_R1 FASTQ_SUFFIX_R2 LIBRARY_LAYOUT SOURCE_MD5 \
         EXECUTOR SOFTWARE_MODE LOCAL_THREADS SLURM_ACCOUNT SLURM_PARTITION SLURM_MAIL \
         MODULE_STAR MODULE_HTSTREAM MODULE_PYTHON MODULE_SAMTOOLS \
         > "$WORKDIR/run_records/settings_snapshot.sh"
@@ -376,7 +382,7 @@ case "$STEP" in
         short_job hts_kmer_qc 4 32G 12:00:00 bash -c 'cd "$1" && shift && exec "$@"' kmerqc "${WORKDIR}" \
             env CONCAT_DIR="${CONCAT_DIR}" HTS_OUT="${HTS_OUT}" SAMPLES_TXT="${SAMPLES_TXT}" \
             "${PY_VENV}/bin/python" "${HERE}/2_HTStream_Preprocessing/2_HTStream_Kmer_QC.py" \
-            "${EXTRA[@]+"${EXTRA[@]}"}"
+            --layout "$LIBRARY_LAYOUT" "${EXTRA[@]+"${EXTRA[@]}"}"
         ;;
     compare)
         [[ ${#EXTRA[@]} -ge 1 ]] || { echo "usage: ./run.sh compare -- /path/to/other_counts.txt" >&2; exit 2; }

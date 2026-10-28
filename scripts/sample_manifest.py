@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Require one R1/R2 pair per sample in every lane and record the exact inputs."""
+"""Require one R1 (and, for paired runs, one R2) per sample in every lane and record the exact inputs."""
 import argparse
 import csv
 import gzip
@@ -42,11 +42,12 @@ def collect(lanes, regex, suffixes, excluded):
         if not samples:
             raise ValueError(f'No samples in {lane}')
         for sample in sorted(samples):
-            if any((sample, mate) not in pairs for mate in (1, 2)):
+            if any((sample, mate) not in pairs for mate in range(1, len(suffixes) + 1)):
                 raise ValueError(f'Missing mate for {sample} in {lane}')
+            r2 = pairs.get((sample, 2))
             records.append([sample, str(Path(lane).resolve()),
-                            str(pairs[sample, 1].absolute()), str(pairs[sample, 2].absolute()),
-                            pairs[sample, 1].stat().st_size, pairs[sample, 2].stat().st_size])
+                            str(pairs[sample, 1].absolute()), str(r2.absolute()) if r2 else '',
+                            pairs[sample, 1].stat().st_size, r2.stat().st_size if r2 else 0])
         sample_sets.append(samples)
     if not sample_sets or any(s != sample_sets[0] for s in sample_sets[1:]):
         raise ValueError('Lane sample sets differ; no samples were dropped')
@@ -61,12 +62,14 @@ def main():
     p.add_argument('--regex', required=True)
     p.add_argument('--r1', default='_R1_001.fastq.gz')
     p.add_argument('--r2', default='_R2_001.fastq.gz')
+    p.add_argument('--layout', choices=['paired', 'single'], default='paired')
     p.add_argument('--exclude', action='append', default=[])
     p.add_argument('--samples', type=Path, required=True)
     p.add_argument('--manifest', type=Path, required=True)
     p.add_argument('--expected', type=Path)
     a = p.parse_args()
-    samples, records = collect(a.lane, a.regex, [a.r1, a.r2], set(a.exclude))
+    suffixes = [a.r1, a.r2] if a.layout == 'paired' else [a.r1]
+    samples, records = collect(a.lane, a.regex, suffixes, set(a.exclude))
     if a.expected:
         expected = a.expected.read_text().splitlines()
         if len(expected) != len(set(expected)) or set(expected) != set(samples):
@@ -77,7 +80,8 @@ def main():
         w = csv.writer(f, delimiter='\t', lineterminator='\n')
         w.writerow(['sample', 'lane', 'r1', 'r2', 'r1_bytes', 'r2_bytes'])
         w.writerows(records)
-    print(f'{len(samples)} samples, {len(a.lane)} lanes; complete pairs and identical sample sets')
+    what = 'complete pairs' if a.layout == 'paired' else 'single-end files'
+    print(f'{len(samples)} samples, {len(a.lane)} lanes; {what} and identical sample sets')
 
 
 if __name__ == '__main__':

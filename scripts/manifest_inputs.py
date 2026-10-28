@@ -24,6 +24,8 @@ def select(manifest, sample, mate, lanes):
     paths = []
     for lane in lane_order:
         row = by_lane[lane]
+        if not row[field]:
+            raise ValueError(f"The input manifest has no {mate} files (single-end run)")
         path = Path(row[field])
         if (
             not path.is_absolute()

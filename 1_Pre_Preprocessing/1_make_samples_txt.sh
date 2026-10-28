@@ -23,7 +23,7 @@ HERE="$(find_pipeline_root)" || exit 1
 source "${HERE}/config.sh"
 load_software "${MODULE_PYTHON}"
 
-args=(--regex "${SAMPLE_REGEX}" --r1 "${FASTQ_SUFFIX_R1}" --r2 "${FASTQ_SUFFIX_R2}"
+args=(--regex "${SAMPLE_REGEX}" --r1 "${FASTQ_SUFFIX_R1}" --r2 "${FASTQ_SUFFIX_R2}" --layout "${LIBRARY_LAYOUT}"
       --samples "${SAMPLES_TXT}" --manifest "${WORKDIR}/input_manifest.tsv")
 for lane in "${LANE_DIRS[@]}"; do args+=(--lane "$lane"); done
 for sample in "${EXCLUDE_SAMPLES[@]}"; do args+=(--exclude "$sample"); done

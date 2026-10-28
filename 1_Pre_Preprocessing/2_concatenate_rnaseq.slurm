@@ -51,7 +51,7 @@ echo "sample: ${sample}"
 outdir="${CONCAT_DIR}/${sample}"
 mkdir -p "${outdir}"
 
-for rd in R1 R2; do
+for rd in "${MATES[@]}"; do
     selected=$(python3 "$HERE/scripts/manifest_inputs.py" "$WORKDIR/input_manifest.tsv" "$sample" "$rd" "${LANE_DIRS[@]}")
     mapfile -t files <<< "$selected"
 
@@ -75,12 +75,16 @@ for rd in R1 R2; do
     declare "count_${rd}=${got}"
 done
 
-if [[ "${count_R1}" -ne "${count_R2}" ]]; then
-    echo "ERROR: ${sample} R1=${count_R1} R2=${count_R2} - reads are not paired" >&2
-    exit 1
+if [[ "$LIBRARY_LAYOUT" == paired ]]; then
+    if [[ "${count_R1}" -ne "${count_R2}" ]]; then
+        echo "ERROR: ${sample} R1=${count_R1} R2=${count_R2} - reads are not paired" >&2
+        exit 1
+    fi
+    echo
+    echo "${sample}: ${count_R1} read pairs across ${#LANE_DIRS[@]} lanes"
+else
+    echo
+    echo "${sample}: ${count_R1} single-end reads across ${#LANE_DIRS[@]} lanes"
 fi
-
-echo
-echo "${sample}: ${count_R1} read pairs across ${#LANE_DIRS[@]} lanes"
 ls -la "${outdir}"
 echo "runtime: $(( $(date +%s) - start ))s"

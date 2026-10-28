@@ -1,6 +1,7 @@
 #!/bin/bash
-# Check the raw lane FASTQs against an @md5Sum.md5 manifest, one array task per
-# lane. A complete source manifest is required.
+# Check the raw lane FASTQs against the provider's checksum file (SOURCE_MD5,
+# default @md5Sum.md5), one array task per lane. The file must cover every FASTQ.
+# With SOURCE_MD5=none the job records each FASTQ's SHA-256 instead.
 #
 #   ./run.sh md5
 #
@@ -37,12 +38,19 @@ lane="${LANE_DIRS[$((idx - 1))]}"
 echo "host: $HOSTNAME"
 echo "lane: ${lane}"
 
-manifest="${lane}/@md5Sum.md5"
-[[ -s "$manifest" ]] || { echo "no manifest at ${manifest}" >&2; exit 1; }
-
 outdir="${WORKDIR}/md5_check"
 mkdir -p "${outdir}"
 report="${outdir}/lane$(basename "${lane}").txt"
+
+if [[ "$SOURCE_MD5" == none ]]; then
+    # No provider checksums to check against: record each FASTQ's SHA-256 so later copies can be compared.
+    echo "SOURCE_MD5=none: no provider checksums; recording SHA-256 of every FASTQ"
+    (cd "${lane}" && find . -maxdepth 1 -name '*.fastq.gz' -printf '%f\n' | sort | xargs -r sha256sum) > "${report%.txt}.sha256"
+    echo "files: $(grep -c . "${report%.txt}.sha256")  report: ${report%.txt}.sha256"
+    exit 0
+fi
+manifest="${lane}/${SOURCE_MD5}"
+[[ -s "$manifest" ]] || { echo "no checksum file at ${manifest} (set SOURCE_MD5 to its name, or none)" >&2; exit 1; }
 
 echo "manifest entries: $(grep -c . "$manifest")"
 echo "fastq.gz present: $(find "${lane}" -maxdepth 1 -name '*.fastq.gz' | wc -l)"

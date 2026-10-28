@@ -43,6 +43,11 @@ def stage(entries, note):
     return None
 
 
+def hits(stage):
+    """Screened hits: read pairs for paired runs, reads for single-end runs (the other count is zero)."""
+    return stage.get("Paired_end", {}).get("hits", 0) + stage.get("Single_end", {}).get("hits", 0)
+
+
 def summarise(path):
     with open(path) as fh:
         entries = json.load(fh)
@@ -69,9 +74,9 @@ def summarise(path):
 
     return {
         "reads_in": n_in,
-        "phix": phix["Paired_end"]["hits"],
-        "rrna": rrna["Paired_end"]["hits"],
-        "rrna_pct": 100.0 * rrna["Paired_end"]["hits"] / n_in if n_in else 0.0,
+        "phix": hits(phix),
+        "rrna": hits(rrna),
+        "rrna_pct": 100.0 * hits(rrna) / n_in if n_in else 0.0,
         "dups": dedup["Fragment"].get("duplicate", 0),
         "dups_pct": 100.0 * dedup["Fragment"].get("duplicate", 0) / n_in if n_in else 0.0,
         "adapter_bp_trimmed": adapt["Fragment"]["basepairs_in"] - adapt["Fragment"]["basepairs_out"],

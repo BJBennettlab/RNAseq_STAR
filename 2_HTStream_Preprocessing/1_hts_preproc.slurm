@@ -13,9 +13,10 @@
 #   hts_LengthFilter   discard reads shorter than 50 bp
 #   hts_Stats          final statistics, and writes the trimmed FASTQs
 #
-# Output per sample: <sample>.json, <sample>_R1.fastq.gz, <sample>_R2.fastq.gz
-# and <sample>_SE.fastq.gz. The alignment step reads R1 and R2 only, so the
-# orphaned single-end reads the trimmers rescue are not carried forward.
+# Output per sample: <sample>.json and, for paired runs, <sample>_R1.fastq.gz,
+# <sample>_R2.fastq.gz and <sample>_SE.fastq.gz. The alignment step reads R1 and
+# R2 only, so the orphaned single-end reads the trimmers rescue are not carried
+# forward. For single-end runs the output is <sample>_SE.fastq.gz.
 #
 #   ./run.sh hts
 #SBATCH --job-name=htstream
@@ -62,7 +63,12 @@ echo "sample: ${sample}"
 
 R1="${CONCAT_DIR}/${sample}/${sample}_R1_concatenated.fastq.gz"
 R2="${CONCAT_DIR}/${sample}/${sample}_R2_concatenated.fastq.gz"
-for f in "$R1" "$R2" "${RRNA_FA}"; do
+if [[ "$LIBRARY_LAYOUT" == paired ]]; then
+    inputs=("$R1" "$R2"); reads=(-1 "$R1" -2 "$R2"); outputs=(R1 R2)
+else
+    inputs=("$R1"); reads=(-U "$R1"); outputs=(SE)
+fi
+for f in "${inputs[@]}" "${RRNA_FA}"; do
     [[ -s "$f" ]] || { echo "ERROR: required input missing or empty: $f" >&2; exit 1; }
 done
 
@@ -73,7 +79,7 @@ json="${outdir}/${sample}.json"
 load_software "${MODULE_HTSTREAM}"
 echo "htstream: $(hts_Stats --version 2>&1 | grep -i version | head -1)"
 
-hts_Stats          -L "${json}" -N 'initial stats' -1 "${R1}" -2 "${R2}" | \
+hts_Stats          -L "${json}" -N 'initial stats' "${reads[@]}" | \
 hts_SeqScreener    -A "${json}" -N 'screen phix' | \
 hts_SeqScreener    -A "${json}" -N 'count the number of rRNA reads' -r -s "${RRNA_FA}" | \
 hts_SuperDeduper   -A "${json}" -N 'remove PCR duplicates' | \
@@ -90,10 +96,11 @@ hts_Stats          -A "${json}" -N 'final stats' -f "${outdir}/${sample}"
 echo
 echo "=== outputs ==="
 ls -la "${outdir}"
-for f in "${outdir}/${sample}_R1.fastq.gz" "${outdir}/${sample}_R2.fastq.gz"; do
+for o in "${outputs[@]}"; do
+    f="${outdir}/${sample}_${o}.fastq.gz"
     [[ -s "$f" ]] || { echo "ERROR: expected output missing: $f" >&2; exit 1; }
     gzip -t "$f" || { echo "ERROR: corrupt output: $f" >&2; exit 1; }
 done
-echo "R1/R2 present and pass gzip -t"
+echo "${outputs[*]} present and pass gzip -t"
 
 echo "runtime: $(( $(date +%s) - start ))s"

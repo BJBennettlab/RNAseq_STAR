@@ -111,6 +111,16 @@ if [[ "$REF_DIR" == "$default_ref_dir" ]]; then REF_DIR="${WORKDIR}/References";
 # --- FASTQ naming ------------------------------------------------------------
 FASTQ_SUFFIX_R1="${FASTQ_SUFFIX_R1:-_R1_001.fastq.gz}"
 FASTQ_SUFFIX_R2="${FASTQ_SUFFIX_R2:-_R2_001.fastq.gz}"
+# Read layout: paired (an R1 and an R2 file per sample in every lane) or single (R1 files only).
+LIBRARY_LAYOUT="${LIBRARY_LAYOUT:-paired}"
+case "$LIBRARY_LAYOUT" in
+    paired) MATES=(R1 R2) ;;
+    single) MATES=(R1) ;;
+    *) echo "config.sh: LIBRARY_LAYOUT must be paired or single" >&2; return 1 ;;
+esac
+# The provider's checksum file in each lane directory (UC Davis Genome Center: @md5Sum.md5). Set SOURCE_MD5=none
+# only when the provider gave none; the md5 step then records each FASTQ's SHA-256 instead of checking it.
+SOURCE_MD5="${SOURCE_MD5:-@md5Sum.md5}"
 
 case "${SAMPLE_NAME_STYLE}" in
     illumina)    SAMPLE_REGEX='s/_S[0-9]+_L[0-9]+$//' ;;

@@ -50,7 +50,7 @@ def get_kmer_profile(fastq_file, k=7, n_reads=100000):
     kmer_freqs = {k: v/total for k, v in kmer_counts.items()}
     return kmer_freqs
 
-def compare_samples(raw_dir, proc_dir, samples, k=7):
+def compare_samples(raw_dir, proc_dir, samples, k=7, layout="paired"):
     """
     Compare k-mer profiles between raw and processed samples for both R1 and R2.
     
@@ -73,7 +73,8 @@ def compare_samples(raw_dir, proc_dir, samples, k=7):
         # Define file paths
         raw_r1 = os.path.join(raw_dir, sample, f"{sample}_R1_concatenated.fastq.gz")
         raw_r2 = os.path.join(raw_dir, sample, f"{sample}_R2_concatenated.fastq.gz")
-        proc_r1 = os.path.join(proc_dir, sample, f"{sample}_R1.fastq.gz")
+        # Single-end runs: the trimmed reads are <sample>_SE.fastq.gz and there is no R2.
+        proc_r1 = os.path.join(proc_dir, sample, f"{sample}_R1.fastq.gz" if layout == "paired" else f"{sample}_SE.fastq.gz")
         proc_r2 = os.path.join(proc_dir, sample, f"{sample}_R2.fastq.gz")
         
         # Generate profiles for R1
@@ -85,6 +86,9 @@ def compare_samples(raw_dir, proc_dir, samples, k=7):
             profiles_r1[f"{sample}_raw"] = raw_profile_r1
             profiles_r1[f"{sample}_proc"] = proc_profile_r1
         
+        if layout != "paired":
+            continue
+
         # Generate profiles for R2
         print(f"Processing R2 files...")
         raw_profile_r2 = get_kmer_profile(raw_r2)
@@ -164,6 +168,7 @@ def main():
     ap.add_argument("--n", type=int, default=5,
                     help="how many samples to take from the top of that file (0 = all)")
     ap.add_argument("--out-prefix", default="sample_correlations")
+    ap.add_argument("--layout", choices=["paired", "single"], default=os.environ.get("LIBRARY_LAYOUT", "paired"))
     a = ap.parse_args()
 
     if not os.path.isfile(a.samples):
@@ -179,18 +184,22 @@ def main():
     print(f"proc: {a.proc_dir}")
     print(f"samples: {', '.join(samples)}")
 
-    profiles_r1, profiles_r2 = compare_samples(a.raw_dir, a.proc_dir, samples)
+    profiles_r1, profiles_r2 = compare_samples(a.raw_dir, a.proc_dir, samples, layout=a.layout)
     if not profiles_r1 and not profiles_r2:
         sys.exit("no profiles were built. check --raw-dir and --proc-dir.")
 
     correlations_r1 = calculate_correlations(profiles_r1)
-    correlations_r2 = calculate_correlations(profiles_r2)
     write_correlations(correlations_r1, f"{a.out_prefix}_R1.csv")
-    write_correlations(correlations_r2, f"{a.out_prefix}_R2.csv")
-    print(f"\nwrote {a.out_prefix}_R1.csv and {a.out_prefix}_R2.csv")
+    if a.layout == "paired":
+        correlations_r2 = calculate_correlations(profiles_r2)
+        write_correlations(correlations_r2, f"{a.out_prefix}_R2.csv")
+        print(f"\nwrote {a.out_prefix}_R1.csv and {a.out_prefix}_R2.csv")
+    else:
+        print(f"\nwrote {a.out_prefix}_R1.csv (single-end)")
 
     print_correlation_summary(correlations_r1, samples, "R1")
-    print_correlation_summary(correlations_r2, samples, "R2")
+    if a.layout == "paired":
+        print_correlation_summary(correlations_r2, samples, "R2")
 
 
 if __name__ == "__main__":

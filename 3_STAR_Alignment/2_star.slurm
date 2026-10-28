@@ -47,9 +47,12 @@ sample=$(sed "${SLURM_ARRAY_TASK_ID}q;d" "${SAMPLES_TXT}")
 [[ -n "$sample" ]] || { echo "ERROR: task ${SLURM_ARRAY_TASK_ID} maps to no line in ${SAMPLES_TXT}" >&2; exit 1; }
 echo "sample: ${sample}"
 
-R1="${HTS_OUT}/${sample}/${sample}_R1.fastq.gz"
-R2="${HTS_OUT}/${sample}/${sample}_R2.fastq.gz"
-for f in "$R1" "$R2"; do
+if [[ "$LIBRARY_LAYOUT" == paired ]]; then
+    reads=("${HTS_OUT}/${sample}/${sample}_R1.fastq.gz" "${HTS_OUT}/${sample}/${sample}_R2.fastq.gz")
+else
+    reads=("${HTS_OUT}/${sample}/${sample}_SE.fastq.gz")
+fi
+for f in "${reads[@]}"; do
     [[ -s "$f" ]] || { echo "ERROR: missing HTStream output: $f" >&2; exit 1; }
 done
 [[ -s "${STAR_INDEX}/SA" ]] || { echo "ERROR: no STAR index at ${STAR_INDEX} - run './run.sh index'" >&2; exit 1; }
@@ -69,7 +72,7 @@ STAR \
     --genomeDir "${STAR_INDEX}" \
     --outSAMtype BAM SortedByCoordinate \
     --readFilesCommand zcat \
-    --readFilesIn "${R1}" "${R2}" \
+    --readFilesIn "${reads[@]}" \
     --quantMode GeneCounts \
     --outFileNamePrefix "${outdir}/${sample}_" \
     > "${outdir}/${sample}-STAR.stdout" 2> "${outdir}/${sample}-STAR.stderr"
