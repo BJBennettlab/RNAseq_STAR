@@ -6,6 +6,29 @@ RNA-seq from paired-end or single-end reads, for mouse, human, any Ensembl speci
 or your own genome: combine sequencing lanes, preprocess with HTStream, align with
 STAR, and produce checked gene counts and BAM files.
 
+## Pipeline overview
+
+```
+Raw FASTQs (one directory per sequencing lane)
+    │
+    ▼
+0_Setup                  — references, Python environment, provider checksums, STAR build
+    │
+    ▼
+1_Pre_Preprocessing      — list samples by exact file name, combine each sample's lanes
+    │
+    ▼
+2_HTStream_Preprocessing — PhiX screen, rRNA count, duplicates, adapters, quality trimming
+    │
+    ▼
+3_STAR_Alignment         — STAR index, alignment, count matrix and checks
+    │
+    ▼
+4_DE_Analysis            — differential expression notebooks (R Markdown, run separately)
+```
+
+Each numbered folder has a README for its scripts. `run.sh` runs the stages in order.
+
 ## Setup and run
 
 On **Ceres (SCINet)**, use **Clusters > Ceres Shell Access** in
@@ -16,9 +39,11 @@ belongs in persistent project storage; processing outputs can go under `/90dayda
 Clone the repository:
 
 ```bash
-git clone https://github.com/BJBennettlab/RNAseq_STAR.git
+git clone https://github.com/Dpbudke/RNAseq_STAR.git
 cd RNAseq_STAR
 ```
+
+Bennett lab members can also clone the lab's copy, `BJBennettlab/RNAseq_STAR`.
 
 Keep raw FASTQs in separate lane directories. Each lane must contain the same
 samples and the provider's checksum file (`@md5Sum.md5` by default; set `SOURCE_MD5`
@@ -116,3 +141,17 @@ In paired-end runs, trimmed singletons are saved but not aligned. `HTS_MIN_LENGT
 `4_DE_Analysis/` contains the original study-specific R analyses. They are not run
 by `all`; they need their own metadata, design and contrasts. GBRS and QTL mapping
 are separate analyses. [CHANGELOG.md](CHANGELOG.md) records pipeline changes.
+
+## Study context
+
+The scripts were first written for RNA-seq of CC and CC-RIX pup samples (about 246 samples) studying diet effects on
+gene expression, on GRCm39. The lab's Diversity Outbred studies were later processed with the same workflow, which
+now also takes other organisms and single-end libraries.
+
+## Related repository
+
+GBRS-based allele-specific expression analysis is in [RNAseq_GBRS](https://github.com/Dpbudke/RNAseq_GBRS).
+
+## Author
+
+Dawson Budke — dpbudke@ucdavis.edu

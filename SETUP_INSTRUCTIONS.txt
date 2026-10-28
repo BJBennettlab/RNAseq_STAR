@@ -26,7 +26,8 @@ RNAseq_STAR setup
    Start in a writable project location, outside any raw lane or existing run.
 
    Clone the repository:
-     git clone https://github.com/BJBennettlab/RNAseq_STAR.git
+     git clone https://github.com/Dpbudke/RNAseq_STAR.git
+   (Bennett lab members can also clone BJBennettlab/RNAseq_STAR.)
      cd RNAseq_STAR
 
    On Ceres:
