@@ -5,7 +5,7 @@
 #   hts_SeqScreener    remove PhiX (built-in reference, no file needed)
 #   hts_SeqScreener    count rRNA. The -r flag records the hit and passes every
 #                      read through, so nothing is removed at this step.
-#   hts_SuperDeduper   remove PCR duplicates
+#   hts_SuperDeduper   remove PCR duplicates (HTS_DEDUP=yes, the default)
 #   hts_AdapterTrimmer trim Illumina adapter read-through
 #   hts_PolyATTrim     trim poly-A/poly-T tails
 #   hts_NTrimmer       trim remaining N bases
@@ -63,6 +63,9 @@ echo "sample: ${sample}"
 
 R1="${CONCAT_DIR}/${sample}/${sample}_R1_concatenated.fastq.gz"
 R2="${CONCAT_DIR}/${sample}/${sample}_R2_concatenated.fastq.gz"
+dedup() {  # HTS_DEDUP=no passes the stream through unchanged
+    if [[ "$HTS_DEDUP" == yes ]]; then hts_SuperDeduper -A "${json}" -N 'remove PCR duplicates'; else cat; fi
+}
 if [[ "$LIBRARY_LAYOUT" == paired ]]; then
     inputs=("$R1" "$R2"); reads=(-1 "$R1" -2 "$R2"); outputs=(R1 R2)
 else
@@ -82,7 +85,7 @@ echo "htstream: $(hts_Stats --version 2>&1 | grep -i version | head -1)"
 hts_Stats          -L "${json}" -N 'initial stats' "${reads[@]}" | \
 hts_SeqScreener    -A "${json}" -N 'screen phix' | \
 hts_SeqScreener    -A "${json}" -N 'count the number of rRNA reads' -r -s "${RRNA_FA}" | \
-hts_SuperDeduper   -A "${json}" -N 'remove PCR duplicates' | \
+dedup               | \
 hts_AdapterTrimmer -A "${json}" -N 'trim adapters' | \
 hts_PolyATTrim     -A "${json}" -N 'remove polyAT' | \
 hts_NTrimmer       -A "${json}" -N 'remove any remaining N characters' | \

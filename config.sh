@@ -147,6 +147,10 @@ esac
 SOURCE_MD5="${SOURCE_MD5:-@md5Sum.md5}"
 # HTStream drops reads shorter than this after trimming. 50 suits 100 to 150 bp reads; use about 30 for 50 bp reads.
 HTS_MIN_LENGTH="${HTS_MIN_LENGTH:-50}"
+# HTStream duplicate removal (hts_SuperDeduper): yes, the lab's method, or no. Without UMIs, single-end reads that
+# start at the same place are often not PCR duplicates (highly expressed genes); check warns for that case.
+HTS_DEDUP="${HTS_DEDUP:-yes}"
+case "$HTS_DEDUP" in yes|no) ;; *) echo "config.sh: HTS_DEDUP must be yes or no" >&2; return 1 ;; esac
 [[ "$HTS_MIN_LENGTH" =~ ^[0-9]+$ ]] || { echo "config.sh: HTS_MIN_LENGTH must be a number" >&2; return 1; }
 
 case "${SAMPLE_NAME_STYLE}" in

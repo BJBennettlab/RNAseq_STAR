@@ -10,8 +10,14 @@
 - Single-end libraries (`LIBRARY_LAYOUT=single`), lanes without a provider checksum file (`SOURCE_MD5=none`
   records SHA-256 instead) and a configurable post-trim minimum length (`HTS_MIN_LENGTH`, default 50; `check`
   refuses reads shorter than it).
+- `HTS_DEDUP=no` skips HTStream duplicate removal (default `yes`, unchanged). On the yeast single-end test it
+  removed 83 to 85% of reads; `check` now warns when it is on for single-end reads.
 - `check` refuses a Slurm account the user does not have and work or reference folders outside that SCINet
   project's `/project` or `/90daydata`.
+- Checked on Ceres (October 28): DGA_DO sample DGADO_1 (two lanes, paired-end, GENCODE mouse) through this version
+  gave the same gene counts, mapping statistics, trimmed reads, HTStream counts and reference manifests as the
+  September 10, 2026 run; a public yeast single-end set (ENA PRJNA1365179, Ensembl release 113) ran through every
+  stage and passed validation.
 
 ## 2026-10-26
 

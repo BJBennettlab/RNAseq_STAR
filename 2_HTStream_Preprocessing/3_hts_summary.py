@@ -57,7 +57,7 @@ def summarise(path):
     found, missing = {}, []
     for key, note in STAGE_NOTES.items():
         st = stage(entries, note)
-        if st is None:
+        if st is None and key != "dedup":  # absent when HTS_DEDUP=no
             missing.append(key)
         else:
             found[key] = st
@@ -65,7 +65,8 @@ def summarise(path):
         raise ValueError(f"{path}: stages not found: {', '.join(missing)}")
 
     init, phix, rrna = found["initial"], found["phix"], found["rrna"]
-    dedup, adapt, final = found["dedup"], found["adapter"], found["final"]
+    dedup, adapt, final = found.get("dedup"), found["adapter"], found["final"]
+    dups = dedup["Fragment"].get("duplicate", 0) if dedup else 0
 
     n_in = init["Fragment"]["in"]
     bp_in = init["Fragment"]["basepairs_in"]
@@ -77,8 +78,8 @@ def summarise(path):
         "phix": hits(phix),
         "rrna": hits(rrna),
         "rrna_pct": 100.0 * hits(rrna) / n_in if n_in else 0.0,
-        "dups": dedup["Fragment"].get("duplicate", 0),
-        "dups_pct": 100.0 * dedup["Fragment"].get("duplicate", 0) / n_in if n_in else 0.0,
+        "dups": dups,
+        "dups_pct": 100.0 * dups / n_in if n_in else 0.0,
         "adapter_bp_trimmed": adapt["Fragment"]["basepairs_in"] - adapt["Fragment"]["basepairs_out"],
         "reads_out": n_out,
         "reads_kept_pct": 100.0 * n_out / n_in if n_in else 0.0,

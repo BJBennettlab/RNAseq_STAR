@@ -63,6 +63,7 @@ RNAseq_STAR setup
    ENSEMBL_SPECIES/ENSEMBL_RELEASE  For ensembl: for example rattus_norvegicus, 113.
    CUSTOM_NAME/CUSTOM_GENOME_FA/CUSTOM_GTF  For custom: your own FASTA and GTF.
    HTS_MIN_LENGTH        Shortest read kept after trimming; default 50.
+   HTS_DEDUP             yes (default, the lab's method) or no: HTStream duplicate removal.
    REF_DIR               Optional shared reference directory. Otherwise in WORKDIR.
    STAR_SJDB_OVERHANG    auto uses read length minus one; a number fixes it.
    COUNT_COLUMN          auto, 2 (unstranded), 3 (forward), or 4 (reverse).

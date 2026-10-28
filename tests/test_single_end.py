@@ -57,6 +57,22 @@ class SingleEnd(unittest.TestCase):
             with self.assertRaises(ValueError):
                 inputs.select(str(table), "A1", "R2", [str(lane)])
 
+    def test_summary_without_duplicate_stage(self):
+        import json
+        def stage(note, **frag):
+            return {"Program_details": {"options": {"notes": note}}, "Fragment": frag,
+                    "Single_end": {"hits": 3}}
+        entries = [stage("initial stats", **{"in": 100, "basepairs_in": 1000}), stage("screen phix"),
+                   stage("count the number of rRNA reads"),
+                   stage("trim adapters", basepairs_in=1000, basepairs_out=900),
+                   stage("final stats", out=80, basepairs_out=800)]
+        with tempfile.TemporaryDirectory(prefix="single_end_codetestfile_") as d:
+            path = Path(d) / "S.json"
+            path.write_text(json.dumps(entries))
+            row = summary.summarise(str(path))
+        self.assertEqual(row["dups"], 0)
+        self.assertEqual(row["rrna"], 3)
+
     def test_screened_hits_for_both_layouts(self):
         self.assertEqual(summary.hits({"Paired_end": {"hits": 7}, "Single_end": {"hits": 0}}), 7)
         self.assertEqual(summary.hits({"Single_end": {"hits": 5}}), 5)

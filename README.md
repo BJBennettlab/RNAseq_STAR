@@ -104,7 +104,8 @@ details and the separate inputs needed by the original R analyses.
 Sample names retain underscores by default. Any number of lanes is supported.
 `COUNT_COLUMN=auto` checks strand estimates per sample and stops if they disagree;
 confirm the library preparation when interpreting this choice. HTStream's original
-duplicate removal and trimming are retained. rRNA is measured, not removed.
+duplicate removal and trimming are retained (`HTS_DEDUP=no` turns duplicate removal off; `check` warns about it for
+single-end reads, where many reads starting at the same place are not PCR duplicates). rRNA is measured, not removed.
 In paired-end runs, trimmed singletons are saved but not aligned. `HTS_MIN_LENGTH`
 (default 50) is the shortest read kept after trimming; use about 30 for 50 bp reads.
 
