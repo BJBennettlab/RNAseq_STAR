@@ -148,6 +148,15 @@ do_check() {
                 red "account $SLURM_ACCOUNT is not available to $USER"; bad=1
             fi
         fi
+        # On SCINet a project is the Slurm account and its storage, so the run writes only under that project.
+        if [[ -n "$SLURM_ACCOUNT" && -d /90daydata ]]; then
+            for d in "$WORKDIR" "$REF_DIR"; do
+                case "$(realpath -m "$d")/" in
+                    /project/"$SLURM_ACCOUNT"/*|/90daydata/"$SLURM_ACCOUNT"/*) ok "$d is in project $SLURM_ACCOUNT" ;;
+                    *) red "$d is not under /project/$SLURM_ACCOUNT or /90daydata/$SLURM_ACCOUNT"; bad=1 ;;
+                esac
+            done
+        fi
         if [[ -n "$SLURM_PARTITION" ]] && command -v scontrol >/dev/null; then
             if scontrol show partition 2>/dev/null | grep -q "PartitionName=${SLURM_PARTITION}\b"; then
                 ok "partition $SLURM_PARTITION"
